@@ -1,5 +1,6 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Query, Body } from '@nestjs/common';
 import { OrganizationsService } from './organizations.service';
+import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 
 @Controller()
 export class OrganizationsController {
@@ -18,5 +19,17 @@ export class OrganizationsController {
   @Get('ulbs/:id')
   getUlbById(@Param('id') id: string) {
     return this.orgService.getUlbById(id);
+  }
+
+  @Post('ulbs')
+  @RequirePermissions('org.manage')
+  createUlb(@Body() body: { name: string; code: string; organizationId?: string; latitude?: number; longitude?: number }) {
+    return this.orgService.createUlb(body);
+  }
+
+  @Patch('ulbs/:id')
+  @RequirePermissions('org.manage')
+  updateUlb(@Param('id') id: string, @Body() body: any) {
+    return this.orgService.updateUlb(id, body);
   }
 }

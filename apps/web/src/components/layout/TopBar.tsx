@@ -99,6 +99,13 @@ export const TopBar: React.FC = () => {
               </option>
             ))}
           </select>
+
+          <a
+            href="/login"
+            className="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded text-[11px] font-semibold transition ml-1"
+          >
+            MFA Login
+          </a>
         </div>
       </div>
     </header>

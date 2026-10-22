@@ -1,6 +1,10 @@
-import { Controller, Post, Get, Body, Request } from '@nestjs/common';
+import { Controller, Post, Get, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginRequest, AuthContextUser } from '@smartlight/shared-types';
+import {
+  LoginRequest,
+  MfaVerifyRequest,
+  AuthContextUser,
+} from '@smartlight/shared-types';
 import { Public } from '../../common/decorators/require-permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -12,6 +16,12 @@ export class AuthController {
   @Post('login')
   async login(@Body() body: LoginRequest) {
     return this.authService.login(body);
+  }
+
+  @Public()
+  @Post('mfa/verify')
+  async verifyMfa(@Body() body: MfaVerifyRequest) {
+    return this.authService.verifyMfa(body);
   }
 
   @Get('me')

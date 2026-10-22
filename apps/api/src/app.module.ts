@@ -5,6 +5,7 @@ import { configuration } from './common/config/configuration';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { UserModule } from './modules/users/users.module';
 import { OrganizationModule } from './modules/organizations/organizations.module';
 import { AssetModule } from './modules/assets/assets.module';
 import { DeviceModule } from './modules/devices/devices.module';
@@ -28,6 +29,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     DatabaseModule,
     HealthModule,
     AuthModule,
+    UserModule,
     OrganizationModule,
     AssetModule,
     DeviceModule,
