@@ -1,6 +1,7 @@
 import { SimulatorService } from './runner';
 
-export * from './deterministic-dataset';
+export * from './fleet-generator';
+export { PROMPT_0_SEED_DATA, generateSampleTelemetry } from './deterministic-dataset';
 export * from './runner';
 
 if (require.main === module) {

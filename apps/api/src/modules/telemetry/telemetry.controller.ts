@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, Body } from '@nestjs/common';
 import { TelemetryService } from './telemetry.service';
 import { UlbScoped } from '../../common/decorators/require-permissions.decorator';
+import { BatchTelemetryIngestDto } from '@smartlight/shared-types';
 
 @Controller()
 export class TelemetryController {
@@ -10,6 +11,24 @@ export class TelemetryController {
   @UlbScoped()
   getOverview(@Query('ulbId') ulbId?: string) {
     return this.telemetryService.getDashboardOverview(ulbId);
+  }
+
+  @Post('telemetry/ingest')
+  ingestTelemetry(@Body() dto: BatchTelemetryIngestDto) {
+    return this.telemetryService.ingestTelemetry(dto);
+  }
+
+  @Get('telemetry/latest')
+  getLatestTelemetry(@Query('deviceId') deviceId: string) {
+    return this.telemetryService.getLatestTelemetry(deviceId);
+  }
+
+  @Get('telemetry/history')
+  getTelemetryHistory(
+    @Query('deviceId') deviceId: string,
+    @Query('limit') limit: string = '50',
+  ) {
+    return this.telemetryService.getTelemetryHistory(deviceId, Number(limit));
   }
 
   @Get('alerts')

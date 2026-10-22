@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
+import { generateFleet } from '@smartlight/device-contracts';
 
 export interface MemoryFeeder {
   id: string;
@@ -310,7 +311,22 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     ] as any[],
     sessions: [] as any[],
     auditLogs: [] as any[],
+    telemetry: [] as any[],
   };
+
+  public seedFullFleet(seed: number = 365) {
+    const fleet = generateFleet(seed);
+    this.memoryStore.zones = fleet.zones as any[];
+    this.memoryStore.wards = fleet.wards as any[];
+    this.memoryStore.streets = fleet.streets as any[];
+    this.memoryStore.feeders = fleet.feeders as any[];
+    this.memoryStore.gateways = fleet.gateways as any[];
+    this.memoryStore.poles = fleet.poles as any[];
+    this.memoryStore.luminaires = fleet.luminaires as any[];
+    this.memoryStore.devices = fleet.devices as any[];
+    this.logger.log(`[DatabaseService] Seeded full fleet of ${fleet.totalLuminaires} streetlights (seed: ${seed})`);
+    return fleet;
+  }
 
   async onModuleInit() {
     const connectionString =

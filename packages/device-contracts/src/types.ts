@@ -39,6 +39,9 @@ export interface Telemetry {
   powerWatts?: number;
   energyKwh?: number;
   burningHours?: number;
+  powerFactor?: number;
+  frequency?: number;
+  temperature?: number;
   faultCodes: string[];
   source: 'SIMULATOR' | 'OEM';
 }

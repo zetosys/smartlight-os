@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { CommandsService } from '../src/modules/commands/commands.service';
 import { DatabaseService } from '../src/database/database.service';
 import { SimulatorServiceModule } from '../src/modules/simulator/simulator.service';
+import { TelemetryService } from '../src/modules/telemetry/telemetry.service';
 import { AuthContextUser } from '@smartlight/shared-types';
 
 describe('Command Lifecycle, Idempotency & ULB Scoping', () => {
@@ -31,7 +32,7 @@ describe('Command Lifecycle, Idempotency & ULB Scoping', () => {
 
   beforeEach(() => {
     dbService = new DatabaseService();
-    simModule = new SimulatorServiceModule(dbService);
+    simModule = new SimulatorServiceModule(dbService, new TelemetryService(dbService));
     simModule.onModuleInit(); // registers simulator adapter
     commandsService = new CommandsService(dbService);
   });
