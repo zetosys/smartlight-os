@@ -1,6 +1,59 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 
+export interface MemoryFeeder {
+  id: string;
+  ulb_id: string;
+  name: string;
+  panel_code: string;
+  capacity_kw: number;
+  meter_number?: string;
+  phase?: '3-PHASE' | 'SINGLE-PHASE';
+  location?: { latitude: number; longitude: number };
+  created_at?: string;
+}
+
+export interface MemoryPole {
+  id: string;
+  ulb_id: string;
+  street_id?: string;
+  external_code: string;
+  height_meters: number;
+  latitude: number;
+  longitude: number;
+  created_at?: string;
+}
+
+export interface MemoryLuminaire {
+  id: string;
+  ulb_id: string;
+  pole_id?: string;
+  feeder_id?: string;
+  wattage: number;
+  lamp_type: string;
+  phase_connection?: 'R' | 'Y' | 'B';
+  created_at?: string;
+}
+
+export interface MemoryDevice {
+  id: string;
+  ulb_id: string;
+  luminaire_id: string;
+  feeder_id?: string | null;
+  gateway_id?: string | null;
+  adapter_key: string;
+  external_id: string;
+  desired_on: boolean;
+  reported_on: boolean;
+  desired_brightness: number;
+  reported_brightness: number;
+  is_online: boolean;
+  last_seen_at: string;
+  simulated: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 @Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DatabaseService.name);
@@ -49,7 +102,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     feeders: [
       { id: '80000000-0000-0000-0000-000000000001', ulb_id: '11111111-1111-1111-1111-111111111111', name: 'Feeder Panel FP-01 Beehama', panel_code: 'GBL-FP-01', capacity_kw: 25.0, meter_number: 'JKPDD-MTR-90812' },
       { id: '80000000-0000-0000-0000-000000000002', ulb_id: '22222222-2222-2222-2222-222222222222', name: 'Feeder Panel FP-01 Katra Banganga', panel_code: 'KTR-FP-01', capacity_kw: 30.0, meter_number: 'JKPDD-MTR-81723' },
-    ],
+    ] as MemoryFeeder[],
     gateways: [
       { id: '85000000-0000-0000-0000-000000000001', ulb_id: '11111111-1111-1111-1111-111111111111', feeder_id: '80000000-0000-0000-0000-000000000001', external_code: 'GW-GBL-01', name: 'CCMS Gateway 01 Beehama', ip_address: '10.14.20.101', is_online: true },
       { id: '85000000-0000-0000-0000-000000000002', ulb_id: '22222222-2222-2222-2222-222222222222', feeder_id: '80000000-0000-0000-0000-000000000002', external_code: 'GW-KTR-01', name: 'CCMS Gateway 01 Katra', ip_address: '10.14.30.101', is_online: true },
@@ -60,14 +113,14 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       { id: '90000000-0000-0000-0000-000000000003', ulb_id: '11111111-1111-1111-1111-111111111111', street_id: '70000000-0000-0000-0000-000000000001', external_code: 'GBL-POLE-003', height_meters: 7.5, latitude: 34.2175, longitude: 74.7735 },
       { id: '90000000-0000-0000-0000-000000000004', ulb_id: '22222222-2222-2222-2222-222222222222', street_id: '70000000-0000-0000-0000-000000000003', external_code: 'KTR-POLE-001', height_meters: 9.0, latitude: 32.9930, longitude: 74.9320 },
       { id: '90000000-0000-0000-0000-000000000005', ulb_id: '22222222-2222-2222-2222-222222222222', street_id: '70000000-0000-0000-0000-000000000003', external_code: 'KTR-POLE-002', height_meters: 8.0, latitude: 32.9935, longitude: 74.9325 },
-    ],
+    ] as MemoryPole[],
     luminaires: [
       { id: 'a0000000-0000-0000-0000-000000000001', ulb_id: '11111111-1111-1111-1111-111111111111', pole_id: '90000000-0000-0000-0000-000000000001', feeder_id: '80000000-0000-0000-0000-000000000001', wattage: 110, lamp_type: 'LED' },
       { id: 'a0000000-0000-0000-0000-000000000002', ulb_id: '11111111-1111-1111-1111-111111111111', pole_id: '90000000-0000-0000-0000-000000000002', feeder_id: '80000000-0000-0000-0000-000000000001', wattage: 70, lamp_type: 'LED' },
       { id: 'a0000000-0000-0000-0000-000000000003', ulb_id: '11111111-1111-1111-1111-111111111111', pole_id: '90000000-0000-0000-0000-000000000003', feeder_id: '80000000-0000-0000-0000-000000000001', wattage: 35, lamp_type: 'LED' },
       { id: 'a0000000-0000-0000-0000-000000000004', ulb_id: '22222222-2222-2222-2222-222222222222', pole_id: '90000000-0000-0000-0000-000000000004', feeder_id: '80000000-0000-0000-0000-000000000002', wattage: 70, lamp_type: 'LED' },
       { id: 'a0000000-0000-0000-0000-000000000005', ulb_id: '22222222-2222-2222-2222-222222222222', pole_id: '90000000-0000-0000-0000-000000000005', feeder_id: '80000000-0000-0000-0000-000000000002', wattage: 35, lamp_type: 'LED' },
-    ],
+    ] as MemoryLuminaire[],
     devices: [
       {
         id: 'b0000000-0000-0000-0000-000000000001',
@@ -149,7 +202,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         last_seen_at: new Date().toISOString(),
         simulated: true,
       },
-    ],
+    ] as MemoryDevice[],
     commands: [] as any[],
     attempts: [] as any[],
     alerts: [
