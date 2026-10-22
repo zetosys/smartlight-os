@@ -1,0 +1,26 @@
+{
+  "name": "smartlight-os-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hardware-agnostic Street Light Management and Control System (SLMCS)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "pnpm --filter \"@smartlight/*\" --filter \"smartlight-*\" build",
+    "dev:api": "pnpm --filter smartlight-api dev",
+    "dev:web": "pnpm --filter smartlight-web dev",
+    "dev:simulator": "pnpm --filter smartlight-simulator dev",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "clean": "pnpm -r exec rimraf dist .next node_modules"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "rimraf": "^5.0.7",
+    "typescript": "^5.4.5"
+  },
+  "packageManager": "pnpm@12.9.1"
+}

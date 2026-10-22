@@ -1,0 +1,33 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE TABLE organizations (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL);
+CREATE TABLE ulbs (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), organization_id uuid NOT NULL REFERENCES organizations(id), name text NOT NULL, UNIQUE(organization_id,name));
+CREATE TABLE zones (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ulb_id uuid NOT NULL REFERENCES ulbs(id), name text NOT NULL);
+CREATE TABLE wards (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), zone_id uuid NOT NULL REFERENCES zones(id), name text NOT NULL);
+CREATE TABLE streets (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ward_id uuid NOT NULL REFERENCES wards(id), name text NOT NULL);
+CREATE TABLE users (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), external_subject text UNIQUE NOT NULL, email text UNIQUE NOT NULL, active boolean NOT NULL DEFAULT true);
+CREATE TABLE roles (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), code text UNIQUE NOT NULL);
+CREATE TABLE permissions (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), code text UNIQUE NOT NULL);
+CREATE TABLE role_permissions (role_id uuid REFERENCES roles(id), permission_id uuid REFERENCES permissions(id), PRIMARY KEY(role_id,permission_id));
+CREATE TABLE user_role_assignments (user_id uuid REFERENCES users(id), role_id uuid REFERENCES roles(id), ulb_id uuid REFERENCES ulbs(id), PRIMARY KEY(user_id,role_id,ulb_id));
+CREATE TABLE feeders (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ulb_id uuid NOT NULL REFERENCES ulbs(id), name text NOT NULL, location geography(Point,4326));
+CREATE TABLE poles (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ulb_id uuid NOT NULL REFERENCES ulbs(id), street_id uuid REFERENCES streets(id), external_code text, location geography(Point,4326), UNIQUE(ulb_id,external_code));
+CREATE TABLE luminaires (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ulb_id uuid NOT NULL REFERENCES ulbs(id), pole_id uuid REFERENCES poles(id), feeder_id uuid REFERENCES feeders(id), wattage integer NOT NULL CHECK(wattage>0));
+CREATE TABLE device_models (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), manufacturer text NOT NULL, model text NOT NULL, capabilities jsonb NOT NULL DEFAULT '{}'::jsonb);
+CREATE TABLE devices (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ulb_id uuid NOT NULL REFERENCES ulbs(id), luminaire_id uuid REFERENCES luminaires(id), feeder_id uuid REFERENCES feeders(id), model_id uuid REFERENCES device_models(id), adapter_key text NOT NULL, external_id text, desired_on boolean, reported_on boolean, last_seen_at timestamptz, simulated boolean NOT NULL DEFAULT true, UNIQUE(adapter_key,external_id));
+CREATE TABLE device_commands (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ulb_id uuid NOT NULL REFERENCES ulbs(id), device_id uuid NOT NULL REFERENCES devices(id), requested_by uuid REFERENCES users(id), command_type text NOT NULL, payload jsonb NOT NULL DEFAULT '{}'::jsonb, idempotency_key text NOT NULL, status text NOT NULL CHECK(status IN ('QUEUED','SENT','ACKNOWLEDGED','CONFIRMED','FAILED','TIMED_OUT')), created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(ulb_id,idempotency_key));
+CREATE TABLE command_attempts (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), command_id uuid NOT NULL REFERENCES device_commands(id), attempted_at timestamptz NOT NULL DEFAULT now(), result text NOT NULL, transport_reference text);
+CREATE TABLE telemetry_readings (device_id uuid NOT NULL, observed_at timestamptz NOT NULL, power_watts numeric, voltage numeric, current_amp numeric, energy_kwh numeric, online boolean, reported_on boolean, fault_codes jsonb NOT NULL DEFAULT '[]'::jsonb, PRIMARY KEY(device_id,observed_at)) PARTITION BY RANGE (observed_at);
+CREATE TABLE telemetry_default PARTITION OF telemetry_readings DEFAULT;
+CREATE TABLE schedules (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ulb_id uuid NOT NULL REFERENCES ulbs(id), name text NOT NULL, timezone text NOT NULL, rule jsonb NOT NULL, enabled boolean NOT NULL DEFAULT true);
+CREATE TABLE schedule_targets (schedule_id uuid REFERENCES schedules(id), device_id uuid REFERENCES devices(id), PRIMARY KEY(schedule_id,device_id));
+CREATE TABLE alerts (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ulb_id uuid NOT NULL REFERENCES ulbs(id), device_id uuid REFERENCES devices(id), code text NOT NULL, severity text NOT NULL, status text NOT NULL DEFAULT 'OPEN', opened_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE maintenance_tickets (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ulb_id uuid NOT NULL REFERENCES ulbs(id), alert_id uuid REFERENCES alerts(id), assigned_to uuid REFERENCES users(id), status text NOT NULL DEFAULT 'OPEN', description text NOT NULL);
+CREATE TABLE audit_logs (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ulb_id uuid REFERENCES ulbs(id), actor_id uuid REFERENCES users(id), action text NOT NULL, entity_type text NOT NULL, entity_id uuid, details jsonb NOT NULL DEFAULT '{}'::jsonb, occurred_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE simulation_runs (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ulb_id uuid REFERENCES ulbs(id), scenario text NOT NULL, seed integer NOT NULL, status text NOT NULL DEFAULT 'CREATED', started_at timestamptz);
+CREATE INDEX idx_poles_geo ON poles USING gist(location);
+CREATE INDEX idx_devices_ulb ON devices(ulb_id);
+CREATE INDEX idx_commands_device_time ON device_commands(device_id,created_at DESC);
+CREATE INDEX idx_alerts_ulb_status ON alerts(ulb_id,status);
+-- Production hardening: implement ULB-scoped RLS or equivalent enforced query policies,
+-- monthly telemetry partitions, retention, migration rollback, and command transition validation.

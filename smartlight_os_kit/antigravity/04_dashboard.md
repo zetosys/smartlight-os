@@ -1,0 +1,2 @@
+# Prompt 4 — Dashboard
+Read README.md, PRD, architecture, API, tests, SQL and prior implementation. Implement operational KPIs, GIS map, device details, live updates and explicit simulated badges. Follow established interfaces, ULB authorization, error states, audit logging and automated tests. Do not substitute UI mock data for backend behavior. Create migration changes safely, document API contracts and run lint/typecheck/tests/build. Provide acceptance evidence and stop at this phase gate.

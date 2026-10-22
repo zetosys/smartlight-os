@@ -1,0 +1,2 @@
+# Prompt 3 — Simulator
+Read README.md, PRD, architecture, API, tests, SQL and prior implementation. Implement 4,608-device deterministic fleet, MQTT/adapter transport, command state, fault scenarios. Follow established interfaces, ULB authorization, error states, audit logging and automated tests. Do not substitute UI mock data for backend behavior. Create migration changes safely, document API contracts and run lint/typecheck/tests/build. Provide acceptance evidence and stop at this phase gate.
