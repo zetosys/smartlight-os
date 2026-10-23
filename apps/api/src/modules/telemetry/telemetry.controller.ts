@@ -31,6 +31,59 @@ export class TelemetryController {
     return this.telemetryService.getTelemetryHistory(deviceId, Number(limit));
   }
 
+  @Get('telemetry/timeseries')
+  @UlbScoped()
+  getTelemetryTimeSeries(
+    @Query('ulbId') ulbId?: string,
+    @Query('deviceId') deviceId?: string,
+    @Query('feederId') feederId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('resolution') resolution?: 'raw' | '5m' | '1h' | '1d',
+    @Query('limit') limit?: string,
+  ) {
+    return this.telemetryService.getTelemetryTimeSeries({
+      ulbId,
+      deviceId,
+      feederId,
+      from,
+      to,
+      resolution,
+      limit: limit ? Number(limit) : undefined,
+    });
+  }
+
+  @Get('telemetry/feeders/load-profiles')
+  @UlbScoped()
+  getFeederLoadProfiles(@Query('ulbId') ulbId?: string) {
+    return this.telemetryService.getFeederLoadProfiles(ulbId);
+  }
+
+  @Get('telemetry/feeders/:id/load-profile')
+  getFeederLoadProfileById(@Param('id') id: string) {
+    return this.telemetryService.getFeederLoadProfileById(id);
+  }
+
+  @Get('telemetry/energy-summary')
+  @UlbScoped()
+  getEnergySummary(
+    @Query('ulbId') ulbId?: string,
+    @Query('period') period?: 'day' | 'week' | 'month' | 'year',
+  ) {
+    return this.telemetryService.getEnergySummary(ulbId, period);
+  }
+
+  @Get('telemetry/burning-hours')
+  @UlbScoped()
+  getBurningHoursSummary(@Query('ulbId') ulbId?: string) {
+    return this.telemetryService.getBurningHoursSummary(ulbId);
+  }
+
+  @Post('telemetry/rollups/compute')
+  computeRollups() {
+    return this.telemetryService.computeRollups();
+  }
+
   @Get('alerts')
   @UlbScoped()
   getAlerts(

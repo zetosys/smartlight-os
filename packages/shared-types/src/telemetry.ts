@@ -133,3 +133,94 @@ export interface SolarTimes {
   dayLengthMinutes: number;
 }
 
+export type TelemetryResolution = 'raw' | '5m' | '1h' | '1d';
+
+export interface TelemetryQueryDto {
+  ulbId?: string;
+  deviceId?: string;
+  feederId?: string;
+  from?: string;
+  to?: string;
+  resolution?: TelemetryResolution;
+  limit?: number;
+}
+
+export interface TimeSeriesPoint {
+  timestamp: string;
+  voltage: number;
+  currentAmp: number;
+  powerWatts: number;
+  energyKwh: number;
+  powerFactor: number;
+  frequency: number;
+  temperature?: number;
+  burningHours?: number;
+  onlineCount?: number;
+  totalCount?: number;
+}
+
+export interface FeederLoadProfile {
+  feederId: string;
+  feederCode: string;
+  feederName: string;
+  ulbId: string;
+  totalLuminaires: number;
+  activeLuminairesOn: number;
+  currentPowerKw: number;
+  totalEnergyKwhToday: number;
+  avgPowerFactor: number;
+  phaseDistribution: { phaseR: number; phaseY: number; phaseB: number };
+  hourlyLoad: { hour: string; powerKw: number; energyKwh: number }[];
+}
+
+export interface EnergySummary {
+  ulbId: string;
+  period: 'day' | 'week' | 'month' | 'year';
+  totalEnergyKwh: number;
+  baselineEnergyKwh: number;
+  energySavingsKwh: number;
+  energySavingsPercent: number;
+  co2SavedKg: number;
+  costSavingsInr: number;
+  dailyTrend: { date: string; actualKwh: number; baselineKwh: number; savingsKwh: number }[];
+}
+
+export interface BurningHoursSummary {
+  ulbId: string;
+  averageBurningHoursPerDay: number;
+  slaTargetHours: number;
+  slaComplianceRate: number;
+  dayBurningIncidents: number;
+  lampFailureCount: number;
+  feederBreakdown: { feederId: string; feederCode: string; avgBurningHours: number; compliance: number }[];
+}
+
+export interface TelemetryHourlyRollup {
+  bucketHour: string;
+  ulbId: string;
+  feederId?: string;
+  deviceId?: string;
+  energyKwhDelta: number;
+  avgVoltage: number;
+  minVoltage: number;
+  maxVoltage: number;
+  avgCurrent: number;
+  avgPowerWatts: number;
+  peakPowerWatts: number;
+  avgPowerFactor: number;
+  burningMinutes: number;
+  samplesCount: number;
+}
+
+export interface TelemetryDailyRollup {
+  bucketDate: string;
+  ulbId: string;
+  feederId?: string;
+  deviceId?: string;
+  totalEnergyKwh: number;
+  burningHours: number;
+  uptimePercentage: number;
+  avgPowerFactor: number;
+  peakPowerWatts: number;
+}
+

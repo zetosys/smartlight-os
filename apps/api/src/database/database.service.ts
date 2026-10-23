@@ -5,43 +5,61 @@ import { generateFleet } from '@smartlight/device-contracts';
 export interface MemoryFeeder {
   id: string;
   ulb_id: string;
+  ulbId?: string;
   name: string;
-  panel_code: string;
-  capacity_kw: number;
+  panel_code?: string;
+  panelCode?: string;
+  capacity_kw?: number;
+  capacityKw?: number;
   meter_number?: string;
+  meterNumber?: string;
   phase?: '3-PHASE' | 'SINGLE-PHASE';
   location?: { latitude: number; longitude: number };
   created_at?: string;
+  createdAt?: string;
 }
 
 export interface MemoryPole {
   id: string;
   ulb_id: string;
+  ulbId?: string;
   street_id?: string;
-  external_code: string;
-  height_meters: number;
+  streetId?: string;
+  external_code?: string;
+  externalCode?: string;
+  height_meters?: number;
   latitude: number;
   longitude: number;
   created_at?: string;
+  createdAt?: string;
 }
 
 export interface MemoryLuminaire {
   id: string;
   ulb_id: string;
+  ulbId?: string;
   pole_id?: string;
+  poleId?: string;
   feeder_id?: string;
+  feederId?: string;
   wattage: number;
-  lamp_type: string;
+  lamp_type?: string;
+  lampType?: string;
   phase_connection?: 'R' | 'Y' | 'B';
   created_at?: string;
+  createdAt?: string;
 }
 
 export interface MemoryDevice {
   id: string;
   ulb_id: string;
+  ulbId?: string;
   luminaire_id: string;
+  luminaireId?: string;
   feeder_id?: string | null;
+  feederId?: string | null;
   gateway_id?: string | null;
+  gatewayId?: string | null;
   adapter_key: string;
   external_id: string;
   desired_on: boolean;
@@ -60,6 +78,10 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DatabaseService.name);
   private pool: Pool | null = null;
   private isConnected: boolean = false;
+
+  constructor() {
+    this.seedHistoricalRollups();
+  }
 
   // In-memory fallback dataset for isolated sandbox tests or when Postgres is not started
   public memoryStore = {
@@ -350,7 +372,91 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     sessions: [] as any[],
     auditLogs: [] as any[],
     telemetry: [] as any[],
+    hourlyRollups: [] as any[],
+    dailyRollups: [] as any[],
   };
+
+  public seedHistoricalRollups() {
+    const ulbIds = [
+      '11111111-1111-1111-1111-111111111111', // Ganderbal
+      '22222222-2222-2222-2222-222222222222', // Katra
+    ];
+
+    const now = new Date();
+
+    for (const ulbId of ulbIds) {
+      const isGbl = ulbId.startsWith('1111');
+      const baseKw = isGbl ? 175.3 : 87.9;
+      const count = isGbl ? 2740 : 1868;
+
+      // Seed past 7 days of daily rollups
+      for (let dayOffset = 7; dayOffset >= 0; dayOffset--) {
+        const d = new Date(now.getTime() - dayOffset * 86400000);
+        const dateStr = d.toISOString().split('T')[0];
+
+        // Variation factor +/- 3%
+        const factor = 0.98 + (dayOffset % 5) * 0.01;
+        const burningHours = +(11.0 + (dayOffset % 3) * 0.2).toFixed(2);
+        const totalEnergyKwh = +(baseKw * burningHours * factor).toFixed(2);
+
+        this.memoryStore.dailyRollups.push({
+          bucket_date: dateStr,
+          ulb_id: ulbId,
+          total_energy_kwh: totalEnergyKwh,
+          burning_hours: burningHours,
+          uptime_percentage: 99.2,
+          avg_power_factor: 0.97,
+          peak_power_watts: +(baseKw * 1000).toFixed(0),
+          total_luminaires: count,
+        });
+      }
+
+      // Seed past 24 hours of hourly rollups
+      for (let h = 23; h >= 0; h--) {
+        const hDate = new Date(now.getTime() - h * 3600000);
+        hDate.setMinutes(0, 0, 0);
+        const hourIso = hDate.toISOString();
+        const hourOfDay = hDate.getHours();
+
+        // Night hours (18:00 to 06:00) vs Day hours (06:00 to 18:00)
+        const isNight = hourOfDay >= 18 || hourOfDay < 6;
+        const isMidnightEco = hourOfDay >= 23 || hourOfDay < 4;
+
+        let activePowerKw = 0.5; // standby day load
+        let burningMinutes = 0;
+        let avgVoltage = 232.0;
+        let pf = 0.22;
+
+        if (isNight) {
+          burningMinutes = 60;
+          pf = 0.97;
+          avgVoltage = 228.5 + (hourOfDay % 4);
+          if (isMidnightEco) {
+            activePowerKw = +(baseKw * 0.65).toFixed(2); // 65% eco dimming
+          } else {
+            activePowerKw = +(baseKw * 0.98).toFixed(2);
+          }
+        }
+
+        const energyKwhDelta = +(activePowerKw * (burningMinutes > 0 ? 1.0 : 0.01)).toFixed(3);
+
+        this.memoryStore.hourlyRollups.push({
+          bucket_hour: hourIso,
+          ulb_id: ulbId,
+          energy_kwh_delta: energyKwhDelta,
+          avg_voltage: avgVoltage,
+          min_voltage: +(avgVoltage - 3.5).toFixed(1),
+          max_voltage: +(avgVoltage + 4.2).toFixed(1),
+          avg_current: +(activePowerKw * 1000 / (avgVoltage * pf)).toFixed(2),
+          avg_power_watts: +(activePowerKw * 1000).toFixed(0),
+          peak_power_watts: +(activePowerKw * 1050).toFixed(0),
+          avg_power_factor: pf,
+          burning_minutes: burningMinutes,
+          samples_count: 60,
+        });
+      }
+    }
+  }
 
   public seedFullFleet(seed: number = 365) {
     const fleet = generateFleet(seed);
@@ -362,7 +468,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     this.memoryStore.poles = fleet.poles as any[];
     this.memoryStore.luminaires = fleet.luminaires as any[];
     this.memoryStore.devices = fleet.devices as any[];
-    this.logger.log(`[DatabaseService] Seeded full fleet of ${fleet.totalLuminaires} streetlights (seed: ${seed})`);
+    this.seedHistoricalRollups();
+    this.logger.log(`[DatabaseService] Seeded full fleet of ${fleet.totalLuminaires} streetlights (seed: ${seed}) with rollups`);
     return fleet;
   }
 
