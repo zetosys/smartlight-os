@@ -48,4 +48,31 @@ export interface CommandSubmissionResponse {
   status: CommandStatus;
   idempotencyKey: string;
   createdAt: string;
+  isIdempotentReplay: boolean;
+}
+
+export type BatchCommandTargetType = 'ULB' | 'FEEDER' | 'ZONE' | 'WARD' | 'STREET' | 'DEVICES';
+
+export interface CreateBatchCommandDto {
+  ulbId: string;
+  type: CommandType;
+  targetType: BatchCommandTargetType;
+  targetId?: string;
+  deviceIds?: string[];
+  idempotencyKey: string;
+  payload?: Record<string, unknown>;
+}
+
+export interface BatchCommandResponse {
+  batchId: string;
+  ulbId: string;
+  type: CommandType;
+  targetType: BatchCommandTargetType;
+  targetCount: number;
+  queuedCount: number;
+  confirmedCount: number;
+  failedCount: number;
+  idempotencyKey: string;
+  isIdempotentReplay: boolean;
+  createdAt: string;
 }

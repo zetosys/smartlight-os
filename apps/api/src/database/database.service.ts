@@ -232,6 +232,44 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         created_at: new Date().toISOString(),
       },
     ],
+    schedules: [
+      {
+        id: 'sched-gbl-01',
+        ulb_id: '11111111-1111-1111-1111-111111111111',
+        name: 'Ganderbal Highway & Municipal Astronomical Profile',
+        scope: 'ULB',
+        timezone: 'Asia/Kolkata',
+        enabled: true,
+        rule: {
+          mode: 'ASTRONOMICAL',
+          turnOnOffsetMinutes: -15, // 15m before sunset
+          turnOffOffsetMinutes: 15, // 15m after sunrise
+          dimmingCurve: [
+            { time: '23:00', brightness: 70 },
+            { time: '04:30', brightness: 100 },
+          ],
+        },
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'sched-ktr-01',
+        ulb_id: '22222222-2222-2222-2222-222222222222',
+        name: 'Katra Shrine Pilgrimage Track Nightfall Profile',
+        scope: 'ULB',
+        timezone: 'Asia/Kolkata',
+        enabled: true,
+        rule: {
+          mode: 'ASTRONOMICAL',
+          turnOnOffsetMinutes: -10,
+          turnOffOffsetMinutes: 10,
+          dimmingCurve: [
+            { time: '01:00', brightness: 80 },
+            { time: '04:00', brightness: 100 },
+          ],
+        },
+        created_at: new Date().toISOString(),
+      },
+    ] as any[],
     users: [
       {
         id: '40000000-0000-0000-0000-000000000001',

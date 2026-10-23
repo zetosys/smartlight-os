@@ -83,21 +83,53 @@ export interface MaintenanceTicket {
   updatedAt: string;
 }
 
+export type ScheduleMode = 'ASTRONOMICAL' | 'FIXED';
+export type ScheduleScope = 'ULB' | 'FEEDER' | 'ZONE' | 'WARD';
+
 export interface ScheduleRule {
-  cronExpression?: string;
-  turnOnTime?: string; // "18:30"
-  turnOffTime?: string; // "05:45"
-  astronomicalOffsetMinutes?: number;
+  mode: ScheduleMode;
+  turnOnOffsetMinutes?: number;
+  turnOffOffsetMinutes?: number;
+  turnOnTime?: string;
+  turnOffTime?: string;
   dimmingCurve?: { time: string; brightness: number }[];
+  cronExpression?: string;
 }
 
 export interface Schedule {
   id: string;
   ulbId: string;
   name: string;
+  scope: ScheduleScope;
+  targetId?: string;
+  targetName?: string;
   timezone: string;
   rule: ScheduleRule;
   enabled: boolean;
   targetCount?: number;
+  lastExecutedAt?: string;
   createdAt: string;
+  updatedAt?: string;
 }
+
+export interface CreateScheduleDto {
+  ulbId: string;
+  name: string;
+  scope: ScheduleScope;
+  targetId?: string;
+  rule: ScheduleRule;
+  enabled?: boolean;
+}
+
+export interface SolarTimes {
+  date: string;
+  latitude: number;
+  longitude: number;
+  sunrise: string;
+  sunset: string;
+  dawnCivil: string;
+  duskCivil: string;
+  solarNoon: string;
+  dayLengthMinutes: number;
+}
+
