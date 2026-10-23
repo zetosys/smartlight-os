@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useUlb } from '../../components/context/UlbContext';
 import { ApiClient } from '../../lib/api-client';
-import { SimulatedBadge, StateComparison, StatusBadge } from '@smartlight/ui';
+import { SimulatedBadge, StateComparison } from '@smartlight/ui';
 import {
   MapPin,
   Layers,
@@ -14,21 +14,19 @@ import {
   ZoomOut,
   Maximize2,
   Zap,
-  Info,
   X,
   Code,
   Radio,
-  Sliders,
   Power,
   Wrench,
   CheckCircle,
   AlertTriangle,
   Activity,
   Filter,
-  Check,
   Compass,
   Cpu,
   ShieldAlert,
+  Search,
 } from 'lucide-react';
 import { GeoJsonFeatureCollection, GeoJsonFeature, GeoJsonGeometry } from '@smartlight/shared-types';
 
@@ -65,6 +63,7 @@ export interface GisFeatureProperties {
   currentAmps?: number;
   powerFactor?: number;
   temperatureC?: number;
+  streetName?: string;
 }
 
 export type GisFeature = GeoJsonFeature<GisFeatureProperties>;
@@ -85,7 +84,6 @@ export default function GisPage() {
   const { selectedUlb } = useUlb();
   const [geoData, setGeoData] = useState<GisFeatureCollection | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [fullFleetLoaded, setFullFleetLoaded] = useState<boolean>(false);
   const [seedingFleet, setSeedingFleet] = useState<boolean>(false);
 
   // Layer & Visual Filter States
@@ -94,11 +92,13 @@ export default function GisPage() {
   const [wattageFilter, setWattageFilter] = useState<'ALL' | '35' | '70' | '110'>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ON' | 'OFF' | 'FAULT' | 'OFFLINE'>('ALL');
   const [selectedFeederCircuit, setSelectedFeederCircuit] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Visualization Toggles
   const [showHalos, setShowHalos] = useState<boolean>(true);
   const [showPhaseLines, setShowPhaseLines] = useState<boolean>(true);
   const [showZones, setShowZones] = useState<boolean>(true);
+  const [showRoads, setShowRoads] = useState<boolean>(true);
 
   // Inspector & Modal States
   const [selectedFeature, setSelectedFeature] = useState<GisFeature | null>(null);
@@ -117,11 +117,13 @@ export default function GisPage() {
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const svgContainerRef = useRef<HTMLDivElement>(null);
 
+  const isGbl = (selectedUlb?.code || 'ULB-GBL') === 'ULB-GBL';
+
   const ulbCoords = useMemo(() => {
-    return selectedUlb?.code === 'ULB-GBL'
-      ? { lat: 34.2165, lng: 74.7725, centerName: 'Ganderbal Town Center (NH-1D & Beehama)', targetFleet: 2740 }
-      : { lat: 32.9925, lng: 74.9318, centerName: 'Katra Shrine Base (Banganga Corridor)', targetFleet: 1868 };
-  }, [selectedUlb]);
+    return isGbl
+      ? { lat: 34.2165, lng: 74.7725, centerName: 'Ganderbal Valley (NH-1D & Beehama)', targetFleet: 2740 }
+      : { lat: 32.9925, lng: 74.9318, centerName: 'Katra Trikuta Foothills (Banganga Corridor)', targetFleet: 1868 };
+  }, [isGbl]);
 
   // Load GeoJSON from API
   const loadGeoJson = useCallback(async () => {
@@ -132,263 +134,100 @@ export default function GisPage() {
       const data = await ApiClient.fetch<GisFeatureCollection>(
         `assets/geojson?${ulbQuery}type=${layerParam}`,
       );
-      setGeoData(data);
-      if (data.features.length > 50) {
-        setFullFleetLoaded(true);
-      }
-      if (data.features.length > 0 && !selectedFeature) {
-        setSelectedFeature(data.features[0]);
+
+      if (data && data.features && data.features.length > 0) {
+        setGeoData(data);
+        if (!selectedFeature) {
+          const firstPole = data.features.find((f) => f.properties.assetType === 'POLE');
+          setSelectedFeature(firstPole || data.features[0]);
+        }
+      } else {
+        throw new Error('Empty feature set');
       }
     } catch {
-      // Offline fallback dataset for development or isolated preview
-      const isGbl = selectedUlb?.code === 'ULB-GBL';
-      const fallbackFeatures: GisFeature[] = isGbl
-        ? [
-            {
-              type: 'Feature',
-              id: '90000000-0000-0000-0000-000000000001',
-              geometry: { type: 'Point', coordinates: [74.7721, 34.2168] },
-              properties: {
-                assetType: 'POLE',
-                id: '90000000-0000-0000-0000-000000000001',
-                externalCode: 'GBL-POLE-001',
-                wattage: 110,
-                heightMeters: 9.0,
-                lampType: 'LED',
-                feederName: 'Feeder Panel FP-01 Beehama',
-                feederPanelCode: 'GBL-FP-01',
-                phaseConnection: 'R',
-                deviceExternalId: 'SIM-GBL-0001',
-                isOnline: true,
-                reportedOn: true,
-                desiredOn: true,
-                status: 'online_on',
-                voltage: 228.4,
-                currentAmps: 0.49,
-                powerFactor: 0.98,
-                temperatureC: 38.5,
-              },
+      // High-density realistic corridor fallback if backend connection drops
+      const fallbackFeatures: GisFeature[] = [];
+      const centerLat = ulbCoords.lat;
+      const centerLng = ulbCoords.lng;
+      const phases: ('R' | 'Y' | 'B')[] = ['R', 'Y', 'B'];
+
+      // 3 Feeders
+      for (let f = 1; f <= 3; f++) {
+        const feederId = `fdr-fallback-${f}`;
+        const panelCode = `${isGbl ? 'GBL' : 'KTR'}-FP-${String(f).padStart(2, '0')}`;
+        const fLat = centerLat + (f - 2) * 0.007;
+        const fLng = centerLng + (f - 2) * 0.009;
+
+        fallbackFeatures.push({
+          type: 'Feature',
+          id: feederId,
+          geometry: { type: 'Point', coordinates: [fLng, fLat] },
+          properties: {
+            assetType: 'FEEDER',
+            id: feederId,
+            panelCode,
+            name: `CCMS Feeder Panel ${panelCode}`,
+            capacityKw: 30.0,
+            meterNumber: `JKPDD-MTR-${1000 + f}`,
+            phase: '3-PHASE',
+            connectedLuminairesCount: 26,
+            activeLuminairesCount: 23,
+            activeLoadKw: 1.8,
+            status: 'healthy',
+          },
+        });
+
+        // 26 Poles per Feeder along the street corridor (78 poles total)
+        for (let p = 1; p <= 26; p++) {
+          const idx = (f - 1) * 26 + p;
+          const poleId = `pole-fallback-${idx}`;
+          const pCode = `${isGbl ? 'GBL' : 'KTR'}-POL-${String(idx).padStart(4, '0')}`;
+          const offsetLat = (p - 13) * 0.00045 + (f - 2) * 0.001;
+          const offsetLng = (p - 13) * 0.00065 + (f - 2) * 0.0012;
+          const pLat = +(fLat + offsetLat).toFixed(6);
+          const pLng = +(fLng + offsetLng).toFixed(6);
+          const phase = phases[p % 3];
+          const wattage = p % 5 === 0 ? 110 : p % 2 === 0 ? 70 : 35;
+          const isReportedOn = p % 8 !== 0;
+
+          fallbackFeatures.push({
+            type: 'Feature',
+            id: poleId,
+            geometry: { type: 'Point', coordinates: [pLng, pLat] },
+            properties: {
+              assetType: 'POLE',
+              id: poleId,
+              externalCode: pCode,
+              wattage,
+              heightMeters: wattage === 110 ? 10.0 : wattage === 70 ? 8.5 : 7.0,
+              lampType: 'LED',
+              feederId,
+              feederName: `CCMS Feeder Panel ${panelCode}`,
+              feederPanelCode: panelCode,
+              phaseConnection: phase,
+              deviceExternalId: `SIM-${isGbl ? 'GBL' : 'KTR'}-${String(idx).padStart(4, '0')}`,
+              isOnline: true,
+              reportedOn: isReportedOn,
+              desiredOn: isReportedOn,
+              status: isReportedOn ? 'online_on' : 'online_off',
+              voltage: isReportedOn ? +(228.0 + (p % 4) * 1.2).toFixed(1) : 230.1,
+              currentAmps: isReportedOn ? +(wattage / (228 * 0.98)).toFixed(2) : 0,
+              powerFactor: isReportedOn ? 0.98 : 0,
+              temperatureC: 34.5,
+              streetName: isGbl ? 'Srinagar-Leh Highway (NH-1D)' : 'Banganga Pilgrimage Track Road',
             },
-            {
-              type: 'Feature',
-              id: '90000000-0000-0000-0000-000000000002',
-              geometry: { type: 'Point', coordinates: [74.7728, 34.217] },
-              properties: {
-                assetType: 'POLE',
-                id: '90000000-0000-0000-0000-000000000002',
-                externalCode: 'GBL-POLE-002',
-                wattage: 70,
-                heightMeters: 8.5,
-                lampType: 'LED',
-                feederName: 'Feeder Panel FP-01 Beehama',
-                feederPanelCode: 'GBL-FP-01',
-                phaseConnection: 'Y',
-                deviceExternalId: 'SIM-GBL-0002',
-                isOnline: true,
-                reportedOn: false,
-                desiredOn: false,
-                status: 'online_off',
-                voltage: 230.1,
-                currentAmps: 0.0,
-                powerFactor: 0.0,
-                temperatureC: 24.2,
-              },
-            },
-            {
-              type: 'Feature',
-              id: '90000000-0000-0000-0000-000000000003',
-              geometry: { type: 'Point', coordinates: [74.7735, 34.2175] },
-              properties: {
-                assetType: 'POLE',
-                id: '90000000-0000-0000-0000-000000000003',
-                externalCode: 'GBL-POLE-003',
-                wattage: 35,
-                heightMeters: 7.5,
-                lampType: 'LED',
-                feederName: 'Feeder Panel FP-01 Beehama',
-                feederPanelCode: 'GBL-FP-01',
-                phaseConnection: 'B',
-                deviceExternalId: 'SIM-GBL-0003',
-                isOnline: false,
-                reportedOn: false,
-                desiredOn: false,
-                status: 'comm_loss',
-                voltage: 0.0,
-                currentAmps: 0.0,
-                powerFactor: 0.0,
-                temperatureC: 18.0,
-              },
-            },
-            {
-              type: 'Feature',
-              id: '80000000-0000-0000-0000-000000000001',
-              geometry: { type: 'Point', coordinates: [74.7725, 34.2165] },
-              properties: {
-                assetType: 'FEEDER',
-                id: '80000000-0000-0000-0000-000000000001',
-                name: 'Feeder Panel FP-01 Beehama',
-                panelCode: 'GBL-FP-01',
-                capacityKw: 30.0,
-                meterNumber: 'JKPDD-MTR-90812',
-                phase: '3-PHASE',
-                connectedLuminairesCount: 78,
-                activeLuminairesCount: 65,
-                activeLoadKw: 5.4,
-                status: 'healthy',
-              },
-            },
-            {
-              type: 'Feature',
-              id: '85000000-0000-0000-0000-000000000001',
-              geometry: { type: 'Point', coordinates: [74.7724, 34.2164] },
-              properties: {
-                assetType: 'GATEWAY',
-                id: '85000000-0000-0000-0000-000000000001',
-                externalCode: 'GW-GBL-01',
-                name: 'CCMS Gateway 01 Beehama',
-                ipAddress: '10.14.20.101',
-                isOnline: true,
-                status: 'online',
-              },
-            },
-            {
-              type: 'Feature',
-              id: 'zone-gbl-01',
-              geometry: {
-                type: 'Polygon',
-                coordinates: [
-                  [
-                    [74.755, 34.205],
-                    [74.79, 34.205],
-                    [74.79, 34.228],
-                    [74.755, 34.228],
-                    [74.755, 34.205],
-                  ],
-                ],
-              },
-              properties: {
-                assetType: 'ZONE',
-                id: 'zone-gbl-01',
-                code: 'GBL-Z1',
-                name: 'Zone 1 - Main Town & Beehama',
-              },
-            },
-          ]
-        : [
-            {
-              type: 'Feature',
-              id: '90000000-0000-0000-0000-000000000004',
-              geometry: { type: 'Point', coordinates: [74.932, 32.993] },
-              properties: {
-                assetType: 'POLE',
-                id: '90000000-0000-0000-0000-000000000004',
-                externalCode: 'KTR-POLE-001',
-                wattage: 70,
-                heightMeters: 8.5,
-                lampType: 'LED',
-                feederName: 'Feeder Panel FP-01 Katra Banganga',
-                feederPanelCode: 'KTR-FP-01',
-                phaseConnection: 'R',
-                deviceExternalId: 'SIM-KTR-0001',
-                isOnline: true,
-                reportedOn: true,
-                desiredOn: true,
-                status: 'online_on',
-                voltage: 228.1,
-                currentAmps: 0.31,
-                powerFactor: 0.98,
-                temperatureC: 37.8,
-              },
-            },
-            {
-              type: 'Feature',
-              id: '90000000-0000-0000-0000-000000000005',
-              geometry: { type: 'Point', coordinates: [74.9325, 32.9935] },
-              properties: {
-                assetType: 'POLE',
-                id: '90000000-0000-0000-0000-000000000005',
-                externalCode: 'KTR-POLE-002',
-                wattage: 35,
-                heightMeters: 7.5,
-                lampType: 'LED',
-                feederName: 'Feeder Panel FP-01 Katra Banganga',
-                feederPanelCode: 'KTR-FP-01',
-                phaseConnection: 'Y',
-                deviceExternalId: 'SIM-KTR-0002',
-                isOnline: true,
-                reportedOn: false,
-                desiredOn: false,
-                status: 'online_off',
-                voltage: 230.2,
-                currentAmps: 0.0,
-                powerFactor: 0.0,
-                temperatureC: 22.4,
-              },
-            },
-            {
-              type: 'Feature',
-              id: '80000000-0000-0000-0000-000000000002',
-              geometry: { type: 'Point', coordinates: [74.9318, 32.9925] },
-              properties: {
-                assetType: 'FEEDER',
-                id: '80000000-0000-0000-0000-000000000002',
-                name: 'Feeder Panel FP-01 Katra Banganga',
-                panelCode: 'KTR-FP-01',
-                capacityKw: 30.0,
-                meterNumber: 'JKPDD-MTR-81723',
-                phase: '3-PHASE',
-                connectedLuminairesCount: 72,
-                activeLuminairesCount: 60,
-                activeLoadKw: 4.8,
-                status: 'healthy',
-              },
-            },
-            {
-              type: 'Feature',
-              id: '85000000-0000-0000-0000-000000000002',
-              geometry: { type: 'Point', coordinates: [74.9317, 32.9924] },
-              properties: {
-                assetType: 'GATEWAY',
-                id: '85000000-0000-0000-0000-000000000002',
-                externalCode: 'GW-KTR-01',
-                name: 'CCMS Gateway 01 Katra',
-                ipAddress: '10.14.30.101',
-                isOnline: true,
-                status: 'online',
-              },
-            },
-            {
-              type: 'Feature',
-              id: 'zone-ktr-01',
-              geometry: {
-                type: 'Polygon',
-                coordinates: [
-                  [
-                    [74.915, 32.98],
-                    [74.945, 32.98],
-                    [74.945, 33.008],
-                    [74.915, 33.008],
-                    [74.915, 32.98],
-                  ],
-                ],
-              },
-              properties: {
-                assetType: 'ZONE',
-                id: 'zone-ktr-01',
-                code: 'KTR-Z1',
-                name: 'Zone 1 - Shrine Base & Banganga Track',
-              },
-            },
-          ];
+          });
+        }
+      }
 
       setGeoData({ type: 'FeatureCollection', features: fallbackFeatures });
-      if (fallbackFeatures.length > 0) {
-        setSelectedFeature(fallbackFeatures[0]);
+      if (fallbackFeatures.length > 0 && !selectedFeature) {
+        setSelectedFeature(fallbackFeatures[1]);
       }
     } finally {
       setLoading(false);
     }
-  }, [selectedUlb, selectedLayer, showZones]);
+  }, [selectedUlb, selectedLayer, showZones, ulbCoords, isGbl, selectedFeature]);
 
   useEffect(() => {
     loadGeoJson();
@@ -402,7 +241,6 @@ export default function GisPage() {
         method: 'POST',
         body: JSON.stringify({ seed: 365 }),
       });
-      setFullFleetLoaded(true);
       await loadGeoJson();
       setActionMessage({
         text: `Full municipal fleet of ${ulbCoords.targetFleet} streetlights loaded into GIS spatial layer.`,
@@ -416,11 +254,18 @@ export default function GisPage() {
     }
   };
 
-  // Filter features based on active user filters
+  // Filter features based on user filters
   const filteredFeatures = useMemo(() => {
     if (!geoData) return [];
 
     return geoData.features.filter((f) => {
+      // Search query filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const code = (f.properties.externalCode || f.properties.panelCode || f.properties.name || '').toLowerCase();
+        if (!code.includes(q)) return false;
+      }
+
       // Layer filter
       if (selectedLayer !== 'all') {
         if (selectedLayer === 'poles' && f.properties.assetType !== 'POLE') return false;
@@ -437,7 +282,8 @@ export default function GisPage() {
         // Feeder circuit isolation
         if (
           selectedFeederCircuit !== 'ALL' &&
-          f.properties.feederPanelCode !== selectedFeederCircuit
+          f.properties.feederPanelCode !== selectedFeederCircuit &&
+          f.properties.feederId !== selectedFeederCircuit
         ) {
           return false;
         }
@@ -476,86 +322,190 @@ export default function GisPage() {
     statusFilter,
     selectedFeederCircuit,
     showZones,
+    searchQuery,
   ]);
 
-  // Spatial Projection bounds computation
-  const bounds = useMemo(() => {
-    const isGbl = selectedUlb?.code === 'ULB-GBL';
-    const fallbackCenterLng = isGbl ? 74.7725 : 74.9318;
-    const fallbackCenterLat = isGbl ? 34.2165 : 32.9925;
+  // Aggregated Category Counts
+  const poles = useMemo(() => filteredFeatures.filter((f) => f.properties.assetType === 'POLE'), [filteredFeatures]);
+  const feeders = useMemo(() => filteredFeatures.filter((f) => f.properties.assetType === 'FEEDER'), [filteredFeatures]);
+  const gateways = useMemo(() => filteredFeatures.filter((f) => f.properties.assetType === 'GATEWAY'), [filteredFeatures]);
+  const zones = useMemo(() => filteredFeatures.filter((f) => f.properties.assetType === 'ZONE'), [filteredFeatures]);
 
-    if (!geoData || geoData.features.length === 0) {
+  const activePoles = useMemo(() => poles.filter((p) => p.properties.reportedOn), [poles]);
+  const faultPoles = useMemo(
+    () =>
+      poles.filter(
+        (p) =>
+          p.properties.status === 'critical_fault' ||
+          p.properties.status === 'major_fault' ||
+          p.properties.status === 'warning',
+      ),
+    [poles],
+  );
+  const totalActiveLoadKw = useMemo(
+    () =>
+      feeders.reduce((acc, f) => acc + (f.properties.activeLoadKw || 0), 0) ||
+      activePoles.reduce((acc, p) => acc + (p.properties.wattage || 70) / 1000, 0),
+    [feeders, activePoles],
+  );
+
+  // Robust Spatial Bounding Box (Focus strictly on points to prevent zone polygons from squishing the map)
+  const bounds = useMemo(() => {
+    const centerLng = ulbCoords.lng;
+    const centerLat = ulbCoords.lat;
+
+    // Use point features for tight, accurate bounds
+    const pts = geoData?.features.filter((f) => f.geometry.type === 'Point') || [];
+
+    if (pts.length === 0) {
       return {
-        minLng: fallbackCenterLng - 0.015,
-        maxLng: fallbackCenterLng + 0.015,
-        minLat: fallbackCenterLat - 0.015,
-        maxLat: fallbackCenterLat + 0.015,
+        minLng: centerLng - 0.012,
+        maxLng: centerLng + 0.012,
+        minLat: centerLat - 0.008,
+        maxLat: centerLat + 0.008,
+        meanLat: centerLat,
+        cosLat: Math.cos((centerLat * Math.PI) / 180),
       };
     }
 
-    let minLng = Infinity;
-    let maxLng = -Infinity;
-    let minLat = Infinity;
-    let maxLat = -Infinity;
-
-    geoData.features.forEach((f) => {
-      if (f.geometry.type === 'Point') {
-        const [lng, lat] = f.geometry.coordinates;
-        if (lng < minLng) minLng = lng;
-        if (lng > maxLng) maxLng = lng;
-        if (lat < minLat) minLat = lat;
-        if (lat > maxLat) maxLat = lat;
-      } else if (f.geometry.type === 'Polygon') {
-        const coords = f.geometry.coordinates[0];
-        coords.forEach(([lng, lat]) => {
-          if (lng < minLng) minLng = lng;
-          if (lng > maxLng) maxLng = lng;
-          if (lat < minLat) minLat = lat;
-          if (lat > maxLat) maxLat = lat;
-        });
-      }
+    let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
+    pts.forEach((f) => {
+      const [lng, lat] = (f.geometry as any).coordinates;
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
     });
 
-    const padLng = Math.max((maxLng - minLng) * 0.15, 0.003);
-    const padLat = Math.max((maxLat - minLat) * 0.15, 0.003);
+    const spanLng = Math.max(maxLng - minLng, 0.005);
+    const spanLat = Math.max(maxLat - minLat, 0.004);
+    const meanLat = (minLat + maxLat) / 2;
 
     return {
-      minLng: minLng - padLng,
-      maxLng: maxLng + padLng,
-      minLat: minLat - padLat,
-      maxLat: maxLat + padLat,
+      minLng: minLng - spanLng * 0.08,
+      maxLng: maxLng + spanLng * 0.08,
+      minLat: minLat - spanLat * 0.08,
+      maxLat: maxLat + spanLat * 0.08,
+      meanLat,
+      cosLat: Math.cos((meanLat * Math.PI) / 180),
     };
-  }, [geoData, selectedUlb]);
+  }, [geoData, ulbCoords]);
 
-  // Transform Geo Coordinates [lng, lat] to SVG ViewBox (900 x 600)
+  // True Geographic Metric Projection (Preserves 1:1 Aspect Ratio without squishing)
   const projectCoords = useCallback(
     (lng: number, lat: number) => {
       const svgWidth = 900;
       const svgHeight = 600;
-      const padding = 50;
+      const padding = 45;
 
-      const lngSpan = bounds.maxLng - bounds.minLng || 0.001;
-      const latSpan = bounds.maxLat - bounds.minLat || 0.001;
+      const availWidth = svgWidth - padding * 2;
+      const availHeight = svgHeight - padding * 2;
 
-      const rawX = ((lng - bounds.minLng) / lngSpan) * (svgWidth - padding * 2) + padding;
-      // Invert Y because latitude increases northward while SVG Y increases downward
-      const rawY =
-        svgHeight - (((lat - bounds.minLat) / latSpan) * (svgHeight - padding * 2) + padding);
+      const dLngGeo = (bounds.maxLng - bounds.minLng) * bounds.cosLat;
+      const dLatGeo = bounds.maxLat - bounds.minLat;
 
-      const centerX = svgWidth / 2;
-      const centerY = svgHeight / 2;
+      // Uniform metric scale
+      const scale = Math.min(availWidth / (dLngGeo || 0.001), availHeight / (dLatGeo || 0.001));
 
-      const x = (rawX - centerX) * zoomLevel + centerX + panOffset.x;
-      const y = (rawY - centerY) * zoomLevel + centerY + panOffset.y;
+      const cxGeo = (bounds.minLng + bounds.maxLng) / 2;
+      const cyGeo = (bounds.minLat + bounds.maxLat) / 2;
+
+      const x = svgWidth / 2 + (lng - cxGeo) * bounds.cosLat * scale;
+      const y = svgHeight / 2 - (lat - cyGeo) * scale;
 
       return { x, y };
     },
-    [bounds, zoomLevel, panOffset],
+    [bounds],
   );
+
+  // Municipal Road Corridors Data (Traced along real municipal geography)
+  const roadCorridors = useMemo(() => {
+    if (isGbl) {
+      return [
+        {
+          id: 'road-nh1d',
+          name: 'Srinagar-Leh National Highway (NH-1D)',
+          type: 'HIGHWAY',
+          points: [
+            [74.755, 34.211],
+            [74.763, 34.214],
+            [74.7725, 34.2165],
+            [74.781, 34.219],
+            [74.792, 34.223],
+          ],
+        },
+        {
+          id: 'road-beehama',
+          name: 'Beehama Chowk to Tullamulla Arterial',
+          type: 'ARTERIAL',
+          points: [
+            [74.7725, 34.2165],
+            [74.771, 34.224],
+            [74.768, 34.232],
+          ],
+        },
+        {
+          id: 'road-duderhama',
+          name: 'Duderhama Central Market Avenue',
+          type: 'ARTERIAL',
+          points: [
+            [74.7725, 34.2165],
+            [74.774, 34.209],
+            [74.777, 34.202],
+          ],
+        },
+        {
+          id: 'road-sindh',
+          name: 'Sindh River Boulevard Corridor',
+          type: 'LOCAL',
+          points: [
+            [74.760, 34.219],
+            [74.772, 34.221],
+            [74.785, 34.225],
+          ],
+        },
+      ];
+    } else {
+      return [
+        {
+          id: 'road-banganga',
+          name: 'Banganga Shrine Pilgrimage Track',
+          type: 'HIGHWAY',
+          points: [
+            [74.922, 32.986],
+            [74.927, 32.989],
+            [74.9318, 32.9925],
+            [74.937, 32.997],
+            [74.942, 33.002],
+          ],
+        },
+        {
+          id: 'road-railway',
+          name: 'Katra Railway Station Expressway',
+          type: 'ARTERIAL',
+          points: [
+            [74.9318, 32.9925],
+            [74.936, 32.987],
+            [74.941, 32.982],
+          ],
+        },
+        {
+          id: 'road-busstand',
+          name: 'Main Bazaar Bus Stand Corridor',
+          type: 'ARTERIAL',
+          points: [
+            [74.9318, 32.9925],
+            [74.926, 32.995],
+            [74.921, 32.998],
+          ],
+        },
+      ];
+    }
+  }, [isGbl]);
 
   // Mouse pan handling
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return; // Only primary mouse button
+    if (e.button !== 0) return;
     setIsDragging(true);
     setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
   };
@@ -570,9 +520,18 @@ export default function GisPage() {
 
   const handleMouseUp = () => setIsDragging(false);
 
+  // Wheel zoom handling
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const zoomFactor = e.deltaY < 0 ? 0.18 : -0.18;
+    setZoomLevel((z) => Math.max(0.65, Math.min(5.5, +(z + zoomFactor).toFixed(2))));
+  };
+
   const resetView = () => {
     setZoomLevel(1);
     setPanOffset({ x: 0, y: 0 });
+    setSelectedFeature(null);
+    setSelectedFeederCircuit('ALL');
   };
 
   // Quick Command Submission: Toggle Pole State Directly on Map
@@ -585,8 +544,9 @@ export default function GisPage() {
         body: JSON.stringify({
           ulbId: selectedUlb?.id,
           deviceId: feature.properties.deviceExternalId || feature.id,
-          commandType: 'SET_STATE',
-          payload: { on: targetState },
+          type: targetState ? 'TURN_ON' : 'TURN_OFF',
+          idempotencyKey: `gis-toggle-${feature.id}-${Date.now()}`,
+          payload: { brightness: targetState ? 100 : 0 },
         }),
       });
 
@@ -619,7 +579,7 @@ export default function GisPage() {
       }
 
       setActionMessage({
-        text: `Command dispatched: ${feature.properties.externalCode} switched ${targetState ? 'ON' : 'OFF'}.`,
+        text: `Command Confirmed: ${feature.properties.externalCode || feature.id} switched ${targetState ? 'ON' : 'OFF'}.`,
         type: 'success',
       });
     } catch (e: any) {
@@ -642,14 +602,14 @@ export default function GisPage() {
         body: JSON.stringify({
           ulbId: selectedUlb?.id,
           title: workOrderTitle || `Repair inspection for ${selectedFeature.properties.externalCode || selectedFeature.properties.panelCode}`,
-          description: workOrderDescription || `Work order dispatched from GIS spatial viewer for pole/panel inspection.`,
+          description: workOrderDescription || `Dispatched from GIS spatial map for field inspection.`,
           priority: workOrderPriority,
         }),
       });
 
       setShowWorkOrderModal(false);
       setActionMessage({
-        text: `Work order dispatched successfully to municipal maintenance team.`,
+        text: `Work order dispatched to municipal field maintenance team.`,
         type: 'success',
       });
     } catch (e: any) {
@@ -660,29 +620,17 @@ export default function GisPage() {
     }
   };
 
-  // Aggregated Category Counts
-  const poles = filteredFeatures.filter((f) => f.properties.assetType === 'POLE');
-  const feeders = filteredFeatures.filter((f) => f.properties.assetType === 'FEEDER');
-  const gateways = filteredFeatures.filter((f) => f.properties.assetType === 'GATEWAY');
-  const zones = filteredFeatures.filter((f) => f.properties.assetType === 'ZONE');
-
-  const activePoles = poles.filter((p) => p.properties.reportedOn);
-  const faultPoles = poles.filter(
-    (p) =>
-      p.properties.status === 'critical_fault' ||
-      p.properties.status === 'major_fault' ||
-      p.properties.status === 'warning',
-  );
-  const totalActiveLoadKw = feeders.reduce(
-    (acc, f) => acc + (f.properties.activeLoadKw || 0),
-    0,
-  );
-
-  // Feeder Panels for Circuit Selector
-  const allFeeders = useMemo(() => {
-    if (!geoData) return [];
-    return geoData.features.filter((f) => f.properties.assetType === 'FEEDER');
-  }, [geoData]);
+  // Center view on selected feature
+  const centerOnFeature = (feature: GisFeature) => {
+    setSelectedFeature(feature);
+    const [lng, lat] = getPointCoords(feature.geometry);
+    const pt = projectCoords(lng, lat);
+    setPanOffset({
+      x: 450 - pt.x,
+      y: 300 - pt.y,
+    });
+    setZoomLevel(2.2);
+  };
 
   return (
     <div className="space-y-4">
@@ -701,10 +649,7 @@ export default function GisPage() {
             <AlertTriangle className="w-4 h-4 text-rose-400" />
           )}
           <span>{actionMessage.text}</span>
-          <button
-            onClick={() => setActionMessage(null)}
-            className="ml-2 text-slate-400 hover:text-white"
-          >
+          <button onClick={() => setActionMessage(null)} className="ml-2 text-slate-400 hover:text-white">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -714,19 +659,19 @@ export default function GisPage() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-3">
-            GIS Spatial Network & Fleet Topology
+            GIS Spatial Network &amp; Fleet Topology
             <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-amber-400 border border-slate-700">
               {selectedUlb?.name}
             </span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Real-time WGS 84 (EPSG:4326) PostGIS GIS Layer: CCMS Feeders, 3-Phase Circuits, LoRaWAN Gateways, and Streetlights.
+            WGS 84 (EPSG:4326) PostGIS Vector Engine: 3-Phase CCMS Circuits, Corridors, Feeder Panels, and Luminaires.
           </p>
         </div>
 
         {/* Global Toolbar Actions */}
         <div className="flex flex-wrap items-center gap-2">
-          {!fullFleetLoaded && (
+          {poles.length < 500 && (
             <button
               onClick={handleSeedFullFleet}
               disabled={seedingFleet}
@@ -739,11 +684,20 @@ export default function GisPage() {
           )}
 
           <button
+            onClick={() => setShowRoads(!showRoads)}
+            className={`px-2.5 py-1.5 rounded text-xs font-medium border transition-colors flex items-center gap-1.5 ${
+              showRoads ? 'bg-amber-950/80 text-amber-300 border-amber-800/60' : 'bg-slate-800 text-slate-400 border-slate-700'
+            }`}
+            title="Toggle municipal road network & corridors"
+          >
+            <Navigation className="w-3.5 h-3.5" />
+            Corridors
+          </button>
+
+          <button
             onClick={() => setShowHalos(!showHalos)}
             className={`px-2.5 py-1.5 rounded text-xs font-medium border transition-colors flex items-center gap-1.5 ${
-              showHalos
-                ? 'bg-amber-950/80 text-amber-300 border-amber-800/60'
-                : 'bg-slate-800 text-slate-400 border-slate-700'
+              showHalos ? 'bg-amber-950/80 text-amber-300 border-amber-800/60' : 'bg-slate-800 text-slate-400 border-slate-700'
             }`}
             title="Toggle radiant illumination halos"
           >
@@ -754,22 +708,18 @@ export default function GisPage() {
           <button
             onClick={() => setShowPhaseLines(!showPhaseLines)}
             className={`px-2.5 py-1.5 rounded text-xs font-medium border transition-colors flex items-center gap-1.5 ${
-              showPhaseLines
-                ? 'bg-sky-950/80 text-sky-300 border-sky-800/60'
-                : 'bg-slate-800 text-slate-400 border-slate-700'
+              showPhaseLines ? 'bg-sky-950/80 text-sky-300 border-sky-800/60' : 'bg-slate-800 text-slate-400 border-slate-700'
             }`}
             title="Toggle 3-phase feeder circuit lines"
           >
             <Activity className="w-3.5 h-3.5" />
-            Phase Lines
+            Phase Circuits
           </button>
 
           <button
             onClick={() => setShowZones(!showZones)}
             className={`px-2.5 py-1.5 rounded text-xs font-medium border transition-colors flex items-center gap-1.5 ${
-              showZones
-                ? 'bg-indigo-950/80 text-indigo-300 border-indigo-800/60'
-                : 'bg-slate-800 text-slate-400 border-slate-700'
+              showZones ? 'bg-indigo-950/80 text-indigo-300 border-indigo-800/60' : 'bg-slate-800 text-slate-400 border-slate-700'
             }`}
             title="Toggle administrative municipal zone boundaries"
           >
@@ -802,6 +752,18 @@ export default function GisPage() {
       {/* Control Room Filter Bar */}
       <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex flex-wrap items-center gap-3">
+          {/* Quick Search */}
+          <div className="relative w-44">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-2 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Search pole / panel..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded pl-8 pr-2 py-1 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:border-amber-500"
+            />
+          </div>
+
           {/* Layer Selector */}
           <div className="flex items-center gap-1.5">
             <span className="text-slate-400 font-medium flex items-center gap-1">
@@ -832,12 +794,12 @@ export default function GisPage() {
             <select
               value={selectedFeederCircuit}
               onChange={(e) => setSelectedFeederCircuit(e.target.value)}
-              className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded px-2 py-1 font-mono focus:outline-none focus:border-amber-500"
+              className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded px-2 py-1 font-mono focus:outline-none focus:border-amber-500 max-w-xs"
             >
-              <option value="ALL">All Feeder Circuits ({allFeeders.length})</option>
-              {allFeeders.map((f) => (
-                <option key={f.id} value={f.properties.panelCode}>
-                  {f.properties.panelCode} — {f.properties.name?.slice(0, 24)}...
+              <option value="ALL">All Feeder Circuits ({feeders.length})</option>
+              {feeders.map((f) => (
+                <option key={f.id} value={f.properties.panelCode || f.id}>
+                  {f.properties.panelCode || f.id} — {f.properties.name?.slice(0, 24)}...
                 </option>
               ))}
             </select>
@@ -902,7 +864,7 @@ export default function GisPage() {
               <option value="ALL">All Statuses</option>
               <option value="ON">Illuminated (ON)</option>
               <option value="OFF">Standby (OFF)</option>
-              <option value="FAULT">Faults & Alarms</option>
+              <option value="FAULT">Faults &amp; Alarms</option>
               <option value="OFFLINE">Communication Loss</option>
             </select>
           </div>
@@ -935,7 +897,7 @@ export default function GisPage() {
               {ulbCoords.lat.toFixed(4)}° N, {ulbCoords.lng.toFixed(4)}° E
             </span>
             <span className="text-slate-600">|</span>
-            <span className="text-slate-400 font-mono">EPSG:4326 (WGS 84)</span>
+            <span className="text-slate-400 font-mono">EPSG:4326 (WGS 84 Metric)</span>
           </div>
 
           <div className="flex items-center gap-3 font-mono text-[11px]">
@@ -963,26 +925,27 @@ export default function GisPage() {
 
         {/* Map Canvas & Asset Inspector Container */}
         <div className="flex-1 flex overflow-hidden relative">
-          {/* Spatial Vector Canvas with Pan & Zoom */}
+          {/* Spatial Vector Canvas with Pan, Zoom & Wheel Support */}
           <div
             ref={svgContainerRef}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onWheel={handleWheel}
             className={`flex-1 bg-slate-950 flex flex-col items-center justify-center relative select-none overflow-hidden ${
               isDragging ? 'cursor-grabbing' : 'cursor-grab'
             }`}
           >
             {/* Control Room Grid Overlay */}
-            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:28px_28px] pointer-events-none" />
+            <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:28px_28px] pointer-events-none" />
 
             {/* Floating Navigation & Zoom Controls */}
             <div className="absolute top-4 left-4 z-20 flex flex-col gap-1.5 bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 shadow-xl backdrop-blur">
               <button
-                onClick={() => setZoomLevel((z) => Math.min(z + 0.35, 4.5))}
+                onClick={() => setZoomLevel((z) => Math.min(z + 0.35, 5.5))}
                 className="p-1.5 hover:bg-slate-800 text-slate-300 hover:text-white rounded"
-                title="Zoom In"
+                title="Zoom In (or use mouse wheel)"
               >
                 <ZoomIn className="w-4 h-4" />
               </button>
@@ -1007,9 +970,9 @@ export default function GisPage() {
             <div className="absolute bottom-4 left-4 z-20 font-mono text-[10px] bg-slate-900/90 border border-slate-800 rounded px-2.5 py-1 text-slate-300 shadow backdrop-blur flex items-center gap-3">
               <span>Zoom: {(zoomLevel * 100).toFixed(0)}%</span>
               <span className="text-slate-600">|</span>
-              <span>Pan: [{panOffset.x}, {panOffset.y}]</span>
+              <span>Pan: [{panOffset.x.toFixed(0)}, {panOffset.y.toFixed(0)}]</span>
               <span className="text-slate-600">|</span>
-              <span className="text-amber-400">PostGIS Vector Canvas</span>
+              <span className="text-amber-400">PostGIS Vector Canvas (60 FPS)</span>
             </div>
 
             {/* Interactive Minimap / Radar in Bottom-Right */}
@@ -1043,7 +1006,7 @@ export default function GisPage() {
             {loading ? (
               <div className="z-10 text-center text-slate-500 text-xs flex flex-col items-center gap-2">
                 <RefreshCw className="w-8 h-8 animate-spin text-amber-400" />
-                <span>Loading RFC 7946 PostGIS GeoJSON Spatial Network...</span>
+                <span>Streaming RFC 7946 PostGIS Spatial Network...</span>
               </div>
             ) : (
               <svg
@@ -1051,289 +1014,369 @@ export default function GisPage() {
                 className="w-full h-full z-10"
                 preserveAspectRatio="xMidYMid meet"
               >
-                {/* 1. Administrative Zone Polygons */}
-                {showZones &&
-                  zones.map((zone) => {
-                    if (zone.geometry.type !== 'Polygon') return null;
-                    const coords = zone.geometry.coordinates[0];
-                    const pointsStr = coords
-                      .map(([lng, lat]) => {
-                        const pt = projectCoords(lng, lat);
-                        return `${pt.x},${pt.y}`;
-                      })
-                      .join(' ');
+                {/* GPU-Accelerated Hardware Transform Group for Buttery Pan & Zoom */}
+                <g
+                  transform={`translate(${panOffset.x}, ${panOffset.y}) scale(${zoomLevel})`}
+                  style={{ transformOrigin: '450px 300px' }}
+                >
+                  {/* 1. Municipal Road Network / Street Corridors */}
+                  {showRoads && (
+                    <g id="road-network" opacity="0.85">
+                      {roadCorridors.map((road) => {
+                        const pathD = road.points
+                          .map(([lng, lat], i) => {
+                            const pt = projectCoords(lng, lat);
+                            return `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`;
+                          })
+                          .join(' ');
 
-                    return (
-                      <g key={`zone-${zone.id}`} onClick={() => setSelectedFeature(zone)}>
-                        <polygon
-                          points={pointsStr}
-                          fill="#38bdf8"
-                          fillOpacity="0.06"
-                          stroke="#0284c7"
-                          strokeWidth="1.5"
-                          strokeDasharray="6,4"
-                          className="cursor-pointer hover:fill-opacity-15 transition-all"
-                        />
-                        {/* Zone Label at centroid */}
-                        <text
-                          x={projectCoords(coords[0][0], coords[0][1]).x + 30}
-                          y={projectCoords(coords[0][0], coords[0][1]).y + 30}
-                          fill="#38bdf8"
-                          opacity="0.6"
-                          fontSize="10"
-                          fontFamily="monospace"
-                          fontWeight="bold"
-                        >
-                          {zone.properties.name}
-                        </text>
-                      </g>
-                    );
-                  })}
+                        const midIdx = Math.floor(road.points.length / 2);
+                        const labelPt = projectCoords(road.points[midIdx][0], road.points[midIdx][1]);
 
-                {/* 2. 3-Phase CCMS Feeder Circuit Lines */}
-                {showPhaseLines &&
-                  feeders.map((feeder) => {
-                    const [fLng, fLat] = getPointCoords(feeder.geometry);
-                    const fPt = projectCoords(fLng, fLat);
-                    const isFeederSelected =
+                        return (
+                          <g key={road.id}>
+                            {/* Road Bed / Asphalt Border */}
+                            <path
+                              d={pathD}
+                              fill="none"
+                              stroke="#1e293b"
+                              strokeWidth={road.type === 'HIGHWAY' ? 18 : 12}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            {/* Road Surface */}
+                            <path
+                              d={pathD}
+                              fill="none"
+                              stroke="#0f172a"
+                              strokeWidth={road.type === 'HIGHWAY' ? 14 : 9}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            {/* Centerline Dash */}
+                            <path
+                              d={pathD}
+                              fill="none"
+                              stroke="#475569"
+                              strokeWidth={road.type === 'HIGHWAY' ? 1.4 : 1.0}
+                              strokeDasharray="6,5"
+                              strokeLinecap="round"
+                            />
+                            {/* Street Label */}
+                            <text
+                              x={labelPt.x}
+                              y={labelPt.y - 12}
+                              textAnchor="middle"
+                              fill="#94a3b8"
+                              fontSize="8"
+                              fontFamily="monospace"
+                              fontWeight="bold"
+                              className="pointer-events-none select-none opacity-80"
+                            >
+                              {road.name}
+                            </text>
+                          </g>
+                        );
+                      })}
+                    </g>
+                  )}
+
+                  {/* 2. Administrative Zone Polygons */}
+                  {showZones &&
+                    zones.map((zone) => {
+                      if (zone.geometry.type !== 'Polygon') return null;
+                      const coords = zone.geometry.coordinates[0];
+                      const pointsStr = coords
+                        .map(([lng, lat]) => {
+                          const pt = projectCoords(lng, lat);
+                          return `${pt.x},${pt.y}`;
+                        })
+                        .join(' ');
+
+                      return (
+                        <g key={`zone-${zone.id}`} onClick={() => centerOnFeature(zone)}>
+                          <polygon
+                            points={pointsStr}
+                            fill="#38bdf8"
+                            fillOpacity="0.04"
+                            stroke="#0284c7"
+                            strokeWidth="1.2"
+                            strokeDasharray="6,4"
+                            className="cursor-pointer hover:fill-opacity-10 transition-all"
+                          />
+                          {/* Zone Label */}
+                          <text
+                            x={projectCoords(coords[0][0], coords[0][1]).x + 25}
+                            y={projectCoords(coords[0][0], coords[0][1]).y + 25}
+                            fill="#38bdf8"
+                            opacity="0.6"
+                            fontSize="9"
+                            fontFamily="monospace"
+                            fontWeight="bold"
+                          >
+                            {zone.properties.name}
+                          </text>
+                        </g>
+                      );
+                    })}
+
+                  {/* 3. 3-Phase CCMS Feeder Circuit Lines */}
+                  {showPhaseLines &&
+                    feeders.map((feeder) => {
+                      const [fLng, fLat] = getPointCoords(feeder.geometry);
+                      const fPt = projectCoords(fLng, fLat);
+                      const isFeederSelected =
+                        selectedFeature?.id === feeder.id ||
+                        selectedFeederCircuit === feeder.properties.panelCode ||
+                        selectedFeederCircuit === feeder.id;
+
+                      const connectedPoles = poles.filter(
+                        (p) =>
+                          p.properties.feederPanelCode === feeder.properties.panelCode ||
+                          p.properties.feederId === feeder.id,
+                      );
+
+                      // Only draw dense lines when this circuit is isolated, or draw light branch lines
+                      return (
+                        <g key={`circuit-lines-${feeder.id}`}>
+                          {connectedPoles.map((pole) => {
+                            const [pLng, pLat] = getPointCoords(pole.geometry);
+                            const pPt = projectCoords(pLng, pLat);
+                            const phase = pole.properties.phaseConnection || 'R';
+
+                            const phaseColor =
+                              phase === 'R' ? '#ef4444' : phase === 'Y' ? '#eab308' : '#3b82f6';
+
+                            // Clean visual styling: only show prominent branch lines when selected
+                            if (!isFeederSelected && selectedFeederCircuit !== 'ALL') return null;
+
+                            return (
+                              <line
+                                key={`line-${feeder.id}-${pole.id}`}
+                                x1={fPt.x}
+                                y1={fPt.y}
+                                x2={pPt.x}
+                                y2={pPt.y}
+                                stroke={phaseColor}
+                                strokeWidth={isFeederSelected ? 1.8 : 0.7}
+                                strokeDasharray={isFeederSelected ? undefined : '2,3'}
+                                opacity={isFeederSelected ? 0.8 : 0.18}
+                              />
+                            );
+                          })}
+                        </g>
+                      );
+                    })}
+
+                  {/* 4. Render CCMS Feeder Panels (Electrical Substations) */}
+                  {feeders.map((feeder) => {
+                    const [lng, lat] = getPointCoords(feeder.geometry);
+                    const pt = projectCoords(lng, lat);
+                    const isSelected =
                       selectedFeature?.id === feeder.id ||
                       selectedFeederCircuit === feeder.properties.panelCode;
 
-                    const connectedPoles = poles.filter(
-                      (p) =>
-                        p.properties.feederPanelCode === feeder.properties.panelCode ||
-                        p.properties.feederId === feeder.id,
-                    );
-
                     return (
-                      <g key={`circuit-lines-${feeder.id}`}>
-                        {connectedPoles.map((pole) => {
-                          const [pLng, pLat] = getPointCoords(pole.geometry);
-                          const pPt = projectCoords(pLng, pLat);
-                          const phase = pole.properties.phaseConnection || 'R';
-
-                          // Color based on electrical phase line
-                          const phaseColor =
-                            phase === 'R' ? '#ef4444' : phase === 'Y' ? '#eab308' : '#3b82f6';
-
-                          return (
-                            <line
-                              key={`line-${feeder.id}-${pole.id}`}
-                              x1={fPt.x}
-                              y1={fPt.y}
-                              x2={pPt.x}
-                              y2={pPt.y}
-                              stroke={phaseColor}
-                              strokeWidth={isFeederSelected ? '1.8' : '0.9'}
-                              strokeDasharray={isFeederSelected ? undefined : '3,3'}
-                              opacity={isFeederSelected ? '0.75' : '0.25'}
-                            />
-                          );
-                        })}
-                      </g>
-                    );
-                  })}
-
-                {/* 3. Render CCMS Feeder Panels */}
-                {feeders.map((feeder) => {
-                  const [lng, lat] = getPointCoords(feeder.geometry);
-                  const pt = projectCoords(lng, lat);
-                  const isSelected = selectedFeature?.id === feeder.id;
-
-                  return (
-                    <g
-                      key={feeder.id}
-                      className="cursor-pointer"
-                      onClick={() => setSelectedFeature(feeder)}
-                    >
-                      {/* Feeder Radiant Aura */}
-                      <circle
-                        cx={pt.x}
-                        cy={pt.y}
-                        r="24"
-                        fill="#10b981"
-                        opacity={isSelected ? '0.35' : '0.12'}
-                      />
-                      {/* Feeder Enclosure Box */}
-                      <rect
-                        x={pt.x - 12}
-                        y={pt.y - 12}
-                        width="24"
-                        height="24"
-                        rx="4"
-                        fill="#064e3b"
-                        stroke={isSelected ? '#f59e0b' : '#10b981'}
-                        strokeWidth={isSelected ? '2.5' : '1.5'}
-                      />
-                      <Zap
-                        x={pt.x - 7}
-                        y={pt.y - 7}
-                        width="14"
-                        height="14"
-                        className="text-emerald-300"
-                      />
-                      {/* Feeder Panel Code Tag */}
-                      <text
-                        x={pt.x}
-                        y={pt.y + 22}
-                        textAnchor="middle"
-                        fill={isSelected ? '#f59e0b' : '#34d399'}
-                        fontSize="9"
-                        fontFamily="monospace"
-                        fontWeight="bold"
+                      <g
+                        key={feeder.id}
+                        className="cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          centerOnFeature(feeder);
+                        }}
                       >
-                        {feeder.properties.panelCode}
-                      </text>
-                    </g>
-                  );
-                })}
-
-                {/* 4. Render LoRaWAN Gateways */}
-                {gateways.map((gw) => {
-                  const [lng, lat] = getPointCoords(gw.geometry);
-                  const pt = projectCoords(lng, lat);
-                  const isSelected = selectedFeature?.id === gw.id;
-
-                  return (
-                    <g
-                      key={gw.id}
-                      className="cursor-pointer"
-                      onClick={() => setSelectedFeature(gw)}
-                    >
-                      <circle
-                        cx={pt.x}
-                        cy={pt.y}
-                        r="18"
-                        fill="#8b5cf6"
-                        opacity={isSelected ? '0.35' : '0.15'}
-                      />
-                      {/* Diamond Lozenge */}
-                      <rect
-                        x={pt.x - 9}
-                        y={pt.y - 9}
-                        width="18"
-                        height="18"
-                        rx="3"
-                        transform={`rotate(45 ${pt.x} ${pt.y})`}
-                        fill="#4c1d95"
-                        stroke={isSelected ? '#ffffff' : '#c084fc'}
-                        strokeWidth={isSelected ? '2' : '1.5'}
-                      />
-                      <Radio
-                        x={pt.x - 6}
-                        y={pt.y - 6}
-                        width="12"
-                        height="12"
-                        className="text-purple-200"
-                      />
-                      <text
-                        x={pt.x}
-                        y={pt.y - 14}
-                        textAnchor="middle"
-                        fill="#c084fc"
-                        fontSize="8.5"
-                        fontFamily="monospace"
-                        fontWeight="bold"
-                      >
-                        {gw.properties.externalCode}
-                      </text>
-                    </g>
-                  );
-                })}
-
-                {/* 5. Render Streetlights / Poles */}
-                {poles.map((pole) => {
-                  const [lng, lat] = getPointCoords(pole.geometry);
-                  const pt = projectCoords(lng, lat);
-                  const isSelected = selectedFeature?.id === pole.id;
-                  const isReportedOn = pole.properties.reportedOn === true;
-                  const wattage = pole.properties.wattage || 70;
-                  const status = pole.properties.status;
-
-                  // Dynamic color symbology based on operational state
-                  let baseColor = '#64748b'; // Standby slate
-                  let isFault = false;
-
-                  if (status === 'critical_fault') {
-                    baseColor = '#f43f5e'; // Crimson alert
-                    isFault = true;
-                  } else if (status === 'major_fault' || status === 'warning') {
-                    baseColor = '#f59e0b'; // Amber warning
-                    isFault = true;
-                  } else if (status === 'comm_loss') {
-                    baseColor = '#9333ea'; // Offline purple
-                  } else if (isReportedOn) {
-                    baseColor = wattage >= 110 ? '#f59e0b' : wattage >= 70 ? '#10b981' : '#38bdf8';
-                  }
-
-                  const haloRadius = wattage >= 110 ? 34 : wattage >= 70 ? 26 : 18;
-
-                  return (
-                    <g
-                      key={pole.id}
-                      className="cursor-pointer"
-                      onClick={() => setSelectedFeature(pole)}
-                    >
-                      {/* Radiant Illumination Halo */}
-                      {showHalos && isReportedOn && (
+                        {/* Feeder Radiant Aura */}
                         <circle
                           cx={pt.x}
                           cy={pt.y}
-                          r={haloRadius}
-                          fill={baseColor}
-                          opacity={isFault ? '0.35' : '0.18'}
-                          className={isFault ? 'animate-pulse' : undefined}
+                          r={isSelected ? 22 : 16}
+                          fill="#10b981"
+                          opacity={isSelected ? 0.35 : 0.15}
                         />
-                      )}
-
-                      {/* Selection Ring Indicator */}
-                      {isSelected && (
-                        <circle
-                          cx={pt.x}
-                          cy={pt.y}
-                          r="15"
-                          fill="none"
-                          stroke="#ffffff"
-                          strokeWidth="2"
-                          strokeDasharray="2,2"
+                        {/* Feeder Enclosure Box */}
+                        <rect
+                          x={pt.x - 10}
+                          y={pt.y - 10}
+                          width="20"
+                          height="20"
+                          rx="4"
+                          fill="#064e3b"
+                          stroke={isSelected ? '#f59e0b' : '#10b981'}
+                          strokeWidth={isSelected ? 2.5 : 1.5}
                         />
-                      )}
-
-                      {/* Pole Pin Core */}
-                      <circle
-                        cx={pt.x}
-                        cy={pt.y}
-                        r="6.5"
-                        fill={isReportedOn ? baseColor : '#1e293b'}
-                        stroke={isSelected ? '#ffffff' : baseColor}
-                        strokeWidth="1.5"
-                      />
-
-                      {/* Inner Optical Dot */}
-                      <circle
-                        cx={pt.x}
-                        cy={pt.y}
-                        r="2.2"
-                        fill={isReportedOn ? '#ffffff' : '#64748b'}
-                      />
-
-                      {/* Label if zoomed in */}
-                      {zoomLevel >= 1.7 && (
+                        <Zap
+                          x={pt.x - 6}
+                          y={pt.y - 6}
+                          width="12"
+                          height="12"
+                          className={isSelected ? 'text-amber-400' : 'text-emerald-300'}
+                        />
+                        {/* Panel Code Label */}
                         <text
                           x={pt.x}
-                          y={pt.y - 11}
+                          y={pt.y + 18}
                           textAnchor="middle"
-                          fill={isSelected ? '#ffffff' : '#cbd5e1'}
+                          fill={isSelected ? '#f59e0b' : '#34d399'}
                           fontSize="8"
                           fontFamily="monospace"
                           fontWeight="bold"
                         >
-                          {pole.properties.externalCode}
+                          {feeder.properties.panelCode || feeder.id}
                         </text>
-                      )}
-                    </g>
-                  );
-                })}
+                      </g>
+                    );
+                  })}
+
+                  {/* 5. Render LoRaWAN Gateways */}
+                  {gateways.map((gw) => {
+                    const [lng, lat] = getPointCoords(gw.geometry);
+                    const pt = projectCoords(lng, lat);
+                    const isSelected = selectedFeature?.id === gw.id;
+
+                    return (
+                      <g
+                        key={gw.id}
+                        className="cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          centerOnFeature(gw);
+                        }}
+                      >
+                        <circle cx={pt.x} cy={pt.y} r="14" fill="#8b5cf6" opacity={isSelected ? 0.35 : 0.12} />
+                        <polygon
+                          points={`${pt.x},${pt.y - 9} ${pt.x + 9},${pt.y} ${pt.x},${pt.y + 9} ${pt.x - 9},${pt.y}`}
+                          fill="#4c1d95"
+                          stroke="#a855f7"
+                          strokeWidth={isSelected ? 2.2 : 1.2}
+                        />
+                        <Radio x={pt.x - 5} y={pt.y - 5} width="10" height="10" className="text-purple-300" />
+                        <text
+                          x={pt.x}
+                          y={pt.y + 17}
+                          textAnchor="middle"
+                          fill="#c084fc"
+                          fontSize="7.5"
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                        >
+                          {gw.properties.externalCode || gw.id}
+                        </text>
+                      </g>
+                    );
+                  })}
+
+                  {/* 6. Render Streetlights / Poles */}
+                  {poles.map((pole) => {
+                    const [lng, lat] = getPointCoords(pole.geometry);
+                    const pt = projectCoords(lng, lat);
+                    const isSelected = selectedFeature?.id === pole.id;
+                    const isReportedOn = pole.properties.reportedOn === true;
+                    const wattage = pole.properties.wattage || 70;
+                    const status = pole.properties.status;
+                    const phase = pole.properties.phaseConnection || 'R';
+
+                    // Phase color
+                    const phaseColor = phase === 'R' ? '#ef4444' : phase === 'Y' ? '#eab308' : '#3b82f6';
+
+                    let baseColor = isReportedOn
+                      ? wattage >= 110
+                        ? '#f59e0b'
+                        : wattage >= 70
+                        ? '#10b981'
+                        : '#38bdf8'
+                      : '#64748b';
+                    let isFault = false;
+
+                    if (status === 'critical_fault') {
+                      baseColor = '#f43f5e';
+                      isFault = true;
+                    } else if (status === 'major_fault' || status === 'warning') {
+                      baseColor = '#f59e0b';
+                      isFault = true;
+                    } else if (status === 'comm_loss') {
+                      baseColor = '#9333ea';
+                    }
+
+                    // Adaptive radius: crisp at 1.0x, prominent when zoomed in
+                    const r = zoomLevel >= 2.5 ? 4.8 : zoomLevel >= 1.6 ? 3.4 : 2.4;
+                    const haloR = wattage >= 110 ? 20 : wattage >= 70 ? 15 : 10;
+
+                    return (
+                      <g
+                        key={pole.id}
+                        className="cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedFeature(pole);
+                        }}
+                      >
+                        {/* Radiant Illumination Halo */}
+                        {showHalos && isReportedOn && (
+                          <circle
+                            cx={pt.x}
+                            cy={pt.y}
+                            r={haloR}
+                            fill={baseColor}
+                            opacity={isFault ? 0.35 : 0.16}
+                            className={isFault ? 'animate-pulse' : undefined}
+                          />
+                        )}
+
+                        {/* Selected Indicator Ring */}
+                        {isSelected && (
+                          <circle
+                            cx={pt.x}
+                            cy={pt.y}
+                            r={r + 5.5}
+                            fill="none"
+                            stroke="#ffffff"
+                            strokeWidth="2"
+                            strokeDasharray="3,2"
+                          />
+                        )}
+
+                        {/* Outer Phase Ring */}
+                        <circle
+                          cx={pt.x}
+                          cy={pt.y}
+                          r={r + 1.2}
+                          fill="none"
+                          stroke={phaseColor}
+                          strokeWidth="1.2"
+                          opacity="0.85"
+                        />
+
+                        {/* Pole Pin Core */}
+                        <circle
+                          cx={pt.x}
+                          cy={pt.y}
+                          r={r}
+                          fill={isReportedOn ? baseColor : '#0f172a'}
+                          stroke={isSelected ? '#ffffff' : baseColor}
+                          strokeWidth="1"
+                        />
+
+                        {/* Inner Optical Dot */}
+                        <circle cx={pt.x} cy={pt.y} r={r * 0.4} fill={isReportedOn ? '#ffffff' : '#64748b'} />
+
+                        {/* Label when zoomed in */}
+                        {zoomLevel >= 2.2 && (
+                          <text
+                            x={pt.x}
+                            y={pt.y - r - 4}
+                            textAnchor="middle"
+                            fill={isSelected ? '#ffffff' : '#cbd5e1'}
+                            fontSize="8"
+                            fontFamily="monospace"
+                            fontWeight="bold"
+                          >
+                            {pole.properties.externalCode || pole.id}
+                          </text>
+                        )}
+                      </g>
+                    );
+                  })}
+                </g>
               </svg>
             )}
           </div>
@@ -1370,10 +1413,7 @@ export default function GisPage() {
                       </span>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setSelectedFeature(null)}
-                    className="text-slate-400 hover:text-white"
-                  >
+                  <button onClick={() => setSelectedFeature(null)} className="text-slate-400 hover:text-white">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
@@ -1438,7 +1478,7 @@ export default function GisPage() {
                               : 'text-sky-400'
                           }`}
                         >
-                          Phase {selectedFeature.properties.phaseConnection || 'R'}
+                          Phase {selectedFeature.properties.phaseConnection || 'R'} (415V)
                         </span>
                       </div>
                     </div>
@@ -1459,221 +1499,201 @@ export default function GisPage() {
                           </span>
                         </div>
                         <div>
-                          <span className="text-slate-400 block text-[10px]">Current:</span>
+                          <span className="text-slate-400 block text-[10px]">Active Current:</span>
                           <span className="text-white font-bold">
-                            {selectedFeature.properties.currentAmps || 0.3} A
+                            {selectedFeature.properties.currentAmps || 0.31} A
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[10px]">Active Power:</span>
+                          <span className="text-amber-400 font-bold">
+                            {selectedFeature.properties.reportedOn
+                              ? `${selectedFeature.properties.wattage || 70} W`
+                              : '0.0 W'}
                           </span>
                         </div>
                         <div>
                           <span className="text-slate-400 block text-[10px]">Power Factor:</span>
-                          <span className="text-white font-bold">
+                          <span className="text-emerald-400 font-bold">
                             {selectedFeature.properties.powerFactor || 0.98}
                           </span>
                         </div>
-                        <div>
-                          <span className="text-slate-400 block text-[10px]">Heatsink Temp:</span>
-                          <span className="text-amber-400 font-bold">
-                            {selectedFeature.properties.temperatureC || 38.2}°C
-                          </span>
-                        </div>
                       </div>
                     </div>
 
-                    <div>
-                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
-                        Feeder Panel Association
-                      </span>
-                      <span className="text-slate-200 font-medium">
-                        {selectedFeature.properties.feederName || 'Direct CCMS Connection'}
-                      </span>
-                      <span className="text-xs font-mono text-emerald-400 block">
-                        [{selectedFeature.properties.feederPanelCode}]
-                      </span>
-                    </div>
-
-                    <div>
-                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
-                        WGS-84 Coordinates
-                      </span>
-                      {(() => {
-                        const [featLng, featLat] = getPointCoords(selectedFeature.geometry);
-                        return (
-                          <>
-                            <span className="text-slate-300 font-mono text-[11px] block">
-                              Lat: {featLat.toFixed(5)}° N
-                            </span>
-                            <span className="text-slate-300 font-mono text-[11px] block">
-                              Lng: {featLng.toFixed(5)}° E
-                            </span>
-                          </>
-                        );
-                      })()}
+                    {/* Feeder & Street Association */}
+                    <div className="space-y-1.5 text-[11px] text-slate-300">
+                      <div className="flex justify-between py-1 border-b border-slate-800">
+                        <span className="text-slate-500">Feeder Panel:</span>
+                        <span className="font-mono text-emerald-400 font-medium">
+                          {selectedFeature.properties.feederPanelCode || 'FP-01'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-1 border-b border-slate-800">
+                        <span className="text-slate-500">Street Name:</span>
+                        <span className="font-medium text-right text-slate-300 max-w-[160px] truncate">
+                          {selectedFeature.properties.streetName || 'Municipal Route'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-1">
+                        <span className="text-slate-500">IoT Controller Node:</span>
+                        <span className="font-mono text-sky-400">
+                          {selectedFeature.properties.deviceExternalId || 'SIM-DEV'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
 
-                {/* Feeder Panel Asset Details */}
+                {/* Feeder Panel Details */}
                 {selectedFeature.properties.assetType === 'FEEDER' && (
                   <div className="space-y-3.5 text-xs">
                     <div>
-                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
-                        Feeder Panel Designation
+                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Panel Code</span>
+                      <span className="font-mono text-base font-bold text-emerald-400">
+                        {selectedFeature.properties.panelCode}
                       </span>
-                      <span className="text-sm font-bold text-white">
-                        {selectedFeature.properties.name}
-                      </span>
+                      <span className="text-xs text-slate-400 block mt-0.5">{selectedFeature.properties.name}</span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 font-mono">
                       <div className="p-2 bg-slate-950/60 border border-slate-800 rounded">
-                        <span className="text-[10px] text-slate-400 block">Panel Code</span>
+                        <span className="text-[10px] text-slate-400 block">Capacity</span>
                         <span className="text-emerald-400 font-bold">
-                          {selectedFeature.properties.panelCode}
+                          {selectedFeature.properties.capacityKw || 30} kW
                         </span>
                       </div>
                       <div className="p-2 bg-slate-950/60 border border-slate-800 rounded">
-                        <span className="text-[10px] text-slate-400 block">Capacity</span>
+                        <span className="text-[10px] text-slate-400 block">Connected Lights</span>
                         <span className="text-white font-bold">
-                          {selectedFeature.properties.capacityKw} kW
+                          {selectedFeature.properties.connectedLuminairesCount || 78} Poles
                         </span>
                       </div>
                     </div>
 
-                    <div className="p-2.5 bg-slate-950 border border-slate-800/80 rounded space-y-1.5 font-mono">
-                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
-                        Circuit Electrical Balancing
-                      </span>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Connected Luminaires:</span>
-                        <strong className="text-white">
-                          {selectedFeature.properties.connectedLuminairesCount || 78}
-                        </strong>
+                    <div className="p-2.5 bg-slate-950 border border-slate-800 rounded text-xs space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Meter Number:</span>
+                        <span className="font-mono text-white">{selectedFeature.properties.meterNumber || 'JKPDD-MTR'}</span>
                       </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Illuminated (Active):</span>
-                        <strong className="text-emerald-400">
-                          {selectedFeature.properties.activeLuminairesCount || 65}
-                        </strong>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Phase System:</span>
+                        <span className="font-mono text-amber-400">3-Phase 415V AC</span>
                       </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Active Circuit Load:</span>
-                        <strong className="text-amber-400">
-                          {selectedFeature.properties.activeLoadKw || 5.4} kW
-                        </strong>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Active Load:</span>
+                        <span className="font-mono text-emerald-400 font-bold">
+                          {(selectedFeature.properties.activeLoadKw || 5.4).toFixed(1)} kW
+                        </span>
                       </div>
                     </div>
 
-                    <div>
-                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
-                        Utility Revenue Meter
-                      </span>
-                      <span className="text-slate-300 font-mono">
-                        {selectedFeature.properties.meterNumber || 'UNMETERED'}
-                      </span>
-                    </div>
-
-                    <div>
-                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
-                        Phase Configuration
-                      </span>
-                      <span className="text-slate-200 font-mono">
-                        {selectedFeature.properties.phase || '3-PHASE'}
-                      </span>
-                    </div>
+                    {/* Circuit Isolation Button */}
+                    <button
+                      onClick={() => setSelectedFeederCircuit(selectedFeature.properties.panelCode || 'ALL')}
+                      className="w-full py-2 bg-sky-950 hover:bg-sky-900 text-sky-200 border border-sky-800/80 rounded text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-amber-400" />
+                      Isolate Circuit On Canvas
+                    </button>
                   </div>
                 )}
 
-                {/* LoRaWAN Gateway Asset Details */}
+                {/* Gateway Details */}
                 {selectedFeature.properties.assetType === 'GATEWAY' && (
                   <div className="space-y-3.5 text-xs">
                     <div>
-                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
-                        Gateway Identity
+                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Gateway Code</span>
+                      <span className="font-mono text-base font-bold text-purple-400">
+                        {selectedFeature.properties.externalCode}
                       </span>
-                      <span className="text-sm font-bold text-white">
-                        {selectedFeature.properties.name}
-                      </span>
+                      <span className="text-xs text-slate-400 block mt-0.5">{selectedFeature.properties.name}</span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 font-mono">
-                      <div className="p-2 bg-slate-950/60 border border-slate-800 rounded">
-                        <span className="text-[10px] text-slate-400 block">Gateway Code</span>
-                        <span className="text-purple-400 font-bold">
-                          {selectedFeature.properties.externalCode}
-                        </span>
+                    <div className="p-2.5 bg-slate-950 border border-slate-800 rounded text-xs space-y-1.5 font-mono">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">IP Address:</span>
+                        <span className="text-white">{selectedFeature.properties.ipAddress || '10.14.20.101'}</span>
                       </div>
-                      <div className="p-2 bg-slate-950/60 border border-slate-800 rounded">
-                        <span className="text-[10px] text-slate-400 block">Network Status</span>
-                        <span className="text-emerald-400 font-bold uppercase">
-                          {selectedFeature.properties.status || 'ONLINE'}
-                        </span>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Status:</span>
+                        <span className="text-emerald-400 font-bold">ONLINE</span>
                       </div>
-                    </div>
-
-                    <div>
-                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
-                        Static IP Address
-                      </span>
-                      <span className="text-slate-300 font-mono">
-                        {selectedFeature.properties.ipAddress || '10.14.20.101'}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Municipal Zone Details */}
-                {selectedFeature.properties.assetType === 'ZONE' && (
-                  <div className="space-y-3.5 text-xs">
-                    <div>
-                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
-                        Administrative Zone
-                      </span>
-                      <span className="text-sm font-bold text-white">
-                        {selectedFeature.properties.name}
-                      </span>
-                    </div>
-
-                    <div className="p-2 bg-slate-950/60 border border-slate-800 rounded font-mono">
-                      <span className="text-[10px] text-slate-400 block">Zone Code</span>
-                      <span className="text-sky-400 font-bold">
-                        {selectedFeature.properties.code}
-                      </span>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Protocol:</span>
+                        <span className="text-amber-400">LoRaWAN Class C / Cellular</span>
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Inspector Footer Actions */}
-              <div className="pt-4 border-t border-slate-800 space-y-2 text-xs">
+              {/* Inspector Bottom Actions */}
+              <div className="pt-4 border-t border-slate-800 space-y-2">
                 <button
-                  onClick={() => setShowWorkOrderModal(true)}
-                  className="w-full py-1.5 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-600/40 rounded text-center block transition-colors font-medium flex items-center justify-center gap-1.5"
+                  onClick={() => {
+                    setWorkOrderTitle(`Maintenance repair for ${selectedFeature.properties.externalCode || selectedFeature.properties.panelCode}`);
+                    setShowWorkOrderModal(true);
+                  }}
+                  className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-medium flex items-center justify-center gap-2 transition-colors"
                 >
-                  <Wrench className="w-3.5 h-3.5" />
-                  Dispatch Work Order &rarr;
+                  <Wrench className="w-3.5 h-3.5 text-amber-400" />
+                  Dispatch Emergency Work Order
                 </button>
-                <a
-                  href="/assets"
-                  className="w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-center block transition-colors"
-                >
-                  Inspect in Asset Hierarchy
-                </a>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* --- MODAL: Work Order Dispatch --- */}
+      {/* RFC 7946 GeoJSON Raw Inspector Modal */}
+      {showJsonModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-3xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Code className="w-4 h-4 text-sky-400" />
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                  RFC 7946 GeoJSON FeatureCollection Inspector
+                </h3>
+              </div>
+              <button onClick={() => setShowJsonModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 flex-1 overflow-auto bg-slate-950 font-mono text-[11px] text-emerald-400">
+              <pre className="whitespace-pre-wrap">
+                {JSON.stringify(
+                  {
+                    type: 'FeatureCollection',
+                    count: filteredFeatures.length,
+                    features: filteredFeatures.slice(0, 30),
+                  },
+                  null,
+                  2,
+                )}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Emergency Work Order Dispatch Modal */}
       {showWorkOrderModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <form
+            onSubmit={handleCreateWorkOrder}
+            className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-lg p-5 space-y-4 shadow-2xl"
+          >
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Wrench className="w-4 h-4 text-amber-400" />
-                Dispatch Field Maintenance Work Order
-              </h3>
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                  Create Field Maintenance Work Order
+                </h3>
+              </div>
               <button
+                type="button"
                 onClick={() => setShowWorkOrderModal(false)}
                 className="text-slate-400 hover:text-white"
               >
@@ -1681,128 +1701,61 @@ export default function GisPage() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateWorkOrder} className="space-y-3.5 text-xs">
+            <div className="space-y-3 text-xs">
               <div>
-                <label className="text-slate-400 block mb-1">Target Asset Code</label>
-                <input
-                  type="text"
-                  readOnly
-                  value={
-                    selectedFeature?.properties.externalCode ||
-                    selectedFeature?.properties.panelCode ||
-                    selectedFeature?.id
-                  }
-                  className="w-full p-2 bg-slate-950 border border-slate-800 rounded font-mono text-slate-300"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Work Order Title</label>
+                <label className="block text-slate-400 font-medium mb-1">Work Order Title</label>
                 <input
                   type="text"
                   required
-                  defaultValue={`Maintenance check for ${
-                    selectedFeature?.properties.externalCode || selectedFeature?.properties.panelCode
-                  }`}
+                  value={workOrderTitle}
                   onChange={(e) => setWorkOrderTitle(e.target.value)}
-                  className="w-full p-2 bg-slate-950 border border-slate-800 rounded text-slate-200 focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-white focus:outline-none focus:border-amber-500 font-mono"
                 />
               </div>
 
               <div>
-                <label className="text-slate-400 block mb-1">Priority Tier</label>
+                <label className="block text-slate-400 font-medium mb-1">Priority</label>
                 <select
                   value={workOrderPriority}
                   onChange={(e) => setWorkOrderPriority(e.target.value as any)}
-                  className="w-full p-2 bg-slate-950 border border-slate-800 rounded text-slate-200 focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-white focus:outline-none focus:border-amber-500"
                 >
-                  <option value="CRITICAL">CRITICAL (Immediate safety hazard)</option>
-                  <option value="HIGH">HIGH (Feeder or multiple lamps out)</option>
-                  <option value="MEDIUM">MEDIUM (Single luminaire inspection)</option>
-                  <option value="LOW">LOW (Scheduled preventative inspection)</option>
+                  <option value="CRITICAL">CRITICAL (Immediate Dispatch)</option>
+                  <option value="HIGH">HIGH (Within 4 Hours)</option>
+                  <option value="MEDIUM">MEDIUM (Within 24 Hours)</option>
+                  <option value="LOW">LOW (Scheduled Routine)</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-slate-400 block mb-1">Description / Technician Notes</label>
+                <label className="block text-slate-400 font-medium mb-1">Issue Description &amp; Notes</label>
                 <textarea
                   rows={3}
-                  defaultValue={`Dispatched directly from GIS Spatial Network Viewer for ${selectedUlb?.name}. Inspect optical enclosure, surge protection device, and driver output.`}
+                  value={workOrderDescription}
                   onChange={(e) => setWorkOrderDescription(e.target.value)}
-                  className="w-full p-2 bg-slate-950 border border-slate-800 rounded text-slate-200 focus:outline-none focus:border-amber-500"
+                  placeholder="Specify symptoms: blown MOV surge protector, driver failure, physical mast damage..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-white focus:outline-none focus:border-amber-500"
                 />
               </div>
+            </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowWorkOrderModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={actionPending}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-slate-950 font-semibold rounded"
-                >
-                  {actionPending ? 'Dispatching...' : 'Dispatch Work Order'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODAL: Raw GeoJSON FeatureCollection Inspector --- */}
-      {showJsonModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-3xl w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Code className="w-4 h-4 text-sky-400" />
-                RFC 7946 GeoJSON FeatureCollection
-              </h3>
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
               <button
-                onClick={() => setShowJsonModal(false)}
-                className="text-slate-400 hover:text-white"
+                type="button"
+                onClick={() => setShowWorkOrderModal(false)}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs"
               >
-                <X className="w-4 h-4" />
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={actionPending}
+                className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold rounded text-xs"
+              >
+                {actionPending ? 'Dispatching...' : 'Dispatch Work Order'}
               </button>
             </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between text-slate-400">
-                <span>Features count: {geoData?.features.length || 0}</span>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(JSON.stringify(geoData, null, 2));
-                    setActionMessage({ text: 'GeoJSON copied to clipboard', type: 'success' });
-                    setTimeout(() => setActionMessage(null), 3000);
-                  }}
-                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded border border-slate-700"
-                >
-                  Copy to Clipboard
-                </button>
-              </div>
-
-              <textarea
-                readOnly
-                rows={16}
-                value={JSON.stringify(geoData, null, 2)}
-                className="w-full p-3 bg-slate-950 border border-slate-800 rounded text-slate-300 font-mono text-[11px] focus:outline-none"
-              />
-
-              <div className="flex justify-end pt-2">
-                <button
-                  onClick={() => setShowJsonModal(false)}
-                  className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

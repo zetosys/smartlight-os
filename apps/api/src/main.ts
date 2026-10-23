@@ -1,10 +1,16 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { DatabaseService } from './database/database.service';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
+
+  // Seed full municipal fleet (4,608 luminaires across Ganderbal & Katra) for live server
+  const dbService = app.get(DatabaseService);
+  dbService.seedFullFleet(365);
+  logger.log('Municipal fleet seeded with 4,608 streetlights and GIS corridors.');
 
   // Security Headers Middleware (Enterprise Hardening)
   app.use((req: any, res: any, next: any) => {

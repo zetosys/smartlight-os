@@ -27,7 +27,7 @@ export class AuthGuard implements CanActivate {
     const authHeader = request.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      // In development / testing mode, allow dev-token or default admin if configured
+      // In testing mode, allow custom test user header
       if (process.env.NODE_ENV === 'test' && request.headers['x-test-user']) {
         try {
           request.user = JSON.parse(request.headers['x-test-user']);
@@ -36,6 +36,21 @@ export class AuthGuard implements CanActivate {
           // ignore
         }
       }
+
+      // In development mode, auto-provide default Platform Admin context if no Bearer token
+      if (process.env.NODE_ENV !== 'production') {
+        request.user = {
+          id: '40000000-0000-0000-0000-000000000001',
+          email: 'admin@smartlight.os',
+          name: 'Global Administrator',
+          roles: [{ roleCode: 'PLATFORM_ADMIN', ulbId: null }],
+          permissions: ['*'],
+          allowedUlbIds: ['*'],
+          isGlobalAdmin: true,
+        };
+        return true;
+      }
+
       throw new UnauthorizedException('Missing or invalid Authorization header');
     }
 
