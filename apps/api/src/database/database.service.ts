@@ -240,7 +240,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         opened_at: new Date(Date.now() - 3600000).toISOString(),
         acknowledged_at: undefined as string | undefined,
       },
-    ],
+    ] as any[],
     tickets: [
       {
         id: 'd0000000-0000-0000-0000-000000000001',
@@ -253,7 +253,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         status: 'OPEN',
         created_at: new Date().toISOString(),
       },
-    ],
+    ] as any[],
     schedules: [
       {
         id: 'sched-gbl-01',
@@ -374,6 +374,15 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     telemetry: [] as any[],
     hourlyRollups: [] as any[],
     dailyRollups: [] as any[],
+    spareParts: [
+      { id: 'part-1', code: 'PART-LED-35W', name: '35W High-Efficiency LED Modular Luminaire', category: 'LUMINAIRE', quantity_in_stock: 120, unit_cost_inr: 2400 },
+      { id: 'part-2', code: 'PART-LED-70W', name: '70W High-Efficiency LED Modular Luminaire', category: 'LUMINAIRE', quantity_in_stock: 150, unit_cost_inr: 3800 },
+      { id: 'part-3', code: 'PART-LED-110W', name: '110W High-Efficiency LED Modular Luminaire', category: 'LUMINAIRE', quantity_in_stock: 80, unit_cost_inr: 5200 },
+      { id: 'part-4', code: 'PART-SPD-10KV', name: '10kV / 10kA Surge Protection Device (SPD)', category: 'PROTECTION', quantity_in_stock: 250, unit_cost_inr: 650 },
+      { id: 'part-5', code: 'PART-DRV-100W', name: 'Constant-Current Dimmable LED Driver 100W', category: 'DRIVER', quantity_in_stock: 140, unit_cost_inr: 1450 },
+      { id: 'part-6', code: 'PART-CON-63A', name: 'CCMS Contactor 63A 3-Phase 4-Pole', category: 'SWITCHGEAR', quantity_in_stock: 60, unit_cost_inr: 2100 },
+      { id: 'part-7', code: 'PART-FUSE-32A', name: 'Phase Protection Fast-Blow Fuse 32A', category: 'PROTECTION', quantity_in_stock: 300, unit_cost_inr: 180 },
+    ] as any[],
   };
 
   public seedHistoricalRollups() {

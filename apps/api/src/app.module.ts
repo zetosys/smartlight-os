@@ -13,6 +13,7 @@ import { CommandModule } from './modules/commands/commands.module';
 import { TelemetryModule } from './modules/telemetry/telemetry.module';
 import { SimulatorModule } from './modules/simulator/simulator.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 
 import { AuthGuard } from './common/guards/auth.guard';
 import { UlbScopeGuard } from './common/guards/ulb-scope.guard';
@@ -37,6 +38,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     TelemetryModule,
     SimulatorModule,
     AuditModule,
+    MaintenanceModule,
   ],
   providers: [
     {

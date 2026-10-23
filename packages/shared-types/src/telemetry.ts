@@ -69,18 +69,59 @@ export interface Alert {
 }
 
 export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING_PARTS' | 'RESOLVED' | 'CLOSED';
+export type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+export interface SparePart {
+  id: string;
+  code: string;
+  name: string;
+  category: 'LUMINAIRE' | 'DRIVER' | 'PROTECTION' | 'SWITCHGEAR' | 'CABLE';
+  quantityInStock: number;
+  unitCostInr: number;
+}
+
+export interface SparePartUsage {
+  partId: string;
+  partCode: string;
+  partName: string;
+  quantity: number;
+}
 
 export interface MaintenanceTicket {
   id: string;
   ulbId: string;
   alertId?: string;
+  deviceId?: string;
+  deviceCode?: string;
   assignedTo?: string;
+  assignedToName?: string;
   status: TicketStatus;
   title: string;
   description: string;
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  priority: TicketPriority;
+  resolutionNotes?: string;
+  sparePartsUsed?: SparePartUsage[];
   createdAt: string;
   updatedAt: string;
+  resolvedAt?: string;
+}
+
+export interface CreateTicketDto {
+  ulbId: string;
+  alertId?: string;
+  deviceId?: string;
+  title: string;
+  description: string;
+  priority: TicketPriority;
+  assignedTo?: string;
+}
+
+export interface UpdateTicketDto {
+  status?: TicketStatus;
+  priority?: TicketPriority;
+  assignedTo?: string;
+  resolutionNotes?: string;
+  sparePartsUsed?: SparePartUsage[];
 }
 
 export type ScheduleMode = 'ASTRONOMICAL' | 'FIXED';

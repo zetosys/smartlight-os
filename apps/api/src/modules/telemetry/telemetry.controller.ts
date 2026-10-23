@@ -83,24 +83,4 @@ export class TelemetryController {
   computeRollups() {
     return this.telemetryService.computeRollups();
   }
-
-  @Get('alerts')
-  @UlbScoped()
-  getAlerts(
-    @Query('ulbId') ulbId?: string,
-    @Query('status') status?: string,
-  ) {
-    return this.telemetryService.getAlerts(ulbId, status);
-  }
-
-  @Post('alerts/:id/acknowledge')
-  acknowledgeAlert(@Param('id') id: string) {
-    return this.telemetryService.acknowledgeAlert(id);
-  }
-
-  @Get('tickets')
-  @UlbScoped()
-  getTickets(@Query('ulbId') ulbId?: string) {
-    return this.telemetryService.getTickets(ulbId);
-  }
 }
