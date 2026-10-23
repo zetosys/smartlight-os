@@ -469,14 +469,117 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
 
   public seedFullFleet(seed: number = 365) {
     const fleet = generateFleet(seed);
-    this.memoryStore.zones = fleet.zones as any[];
-    this.memoryStore.wards = fleet.wards as any[];
-    this.memoryStore.streets = fleet.streets as any[];
-    this.memoryStore.feeders = fleet.feeders as any[];
-    this.memoryStore.gateways = fleet.gateways as any[];
-    this.memoryStore.poles = fleet.poles as any[];
-    this.memoryStore.luminaires = fleet.luminaires as any[];
-    this.memoryStore.devices = fleet.devices as any[];
+
+    this.memoryStore.zones = fleet.zones.map((z) => ({
+      ...z,
+      code: z.code || 'ZONE',
+      ulb_id: (z as any).ulb_id || z.ulbId,
+      ulbId: z.ulbId || (z as any).ulb_id,
+    }));
+
+    this.memoryStore.wards = fleet.wards.map((w) => ({
+      ...w,
+      zone_id: (w as any).zone_id || w.zoneId,
+      zoneId: w.zoneId || (w as any).zone_id,
+      ulb_id: (w as any).ulb_id || w.ulbId,
+      ulbId: w.ulbId || (w as any).ulb_id,
+      ward_number: (w as any).ward_number || w.wardNumber,
+      wardNumber: w.wardNumber || (w as any).ward_number,
+    }));
+
+    this.memoryStore.streets = fleet.streets.map((s) => ({
+      ...s,
+      ward_id: (s as any).ward_id || s.wardId,
+      wardId: s.wardId || (s as any).ward_id,
+      street_type: (s as any).street_type || s.type,
+      type: s.type || (s as any).street_type,
+    }));
+
+    this.memoryStore.feeders = fleet.feeders.map((f) => ({
+      ...f,
+      ulb_id: (f as any).ulb_id || f.ulbId,
+      ulbId: f.ulbId || (f as any).ulb_id,
+      panel_code: (f as any).panel_code || f.panelCode,
+      panelCode: f.panelCode || (f as any).panel_code,
+      capacity_kw: (f as any).capacity_kw || f.capacityKw,
+      capacityKw: f.capacityKw || (f as any).capacity_kw,
+      meter_number: (f as any).meter_number || f.meterNumber,
+      meterNumber: f.meterNumber || (f as any).meter_number,
+      location: f.location || {
+        latitude: (f as any).latitude || 34.2165,
+        longitude: (f as any).longitude || 74.7725,
+      },
+    }));
+
+    this.memoryStore.gateways = fleet.gateways.map((g) => ({
+      ...g,
+      ulb_id: (g as any).ulb_id || g.ulbId,
+      ulbId: g.ulbId || (g as any).ulb_id,
+      feeder_id: (g as any).feeder_id || g.feederId,
+      feederId: g.feederId || (g as any).feeder_id,
+      external_code: (g as any).external_code || g.externalCode,
+      externalCode: g.externalCode || (g as any).external_code,
+      ip_address: (g as any).ip_address || g.ipAddress,
+      ipAddress: g.ipAddress || (g as any).ip_address,
+      is_online: (g as any).is_online !== undefined ? (g as any).is_online : g.isOnline,
+      isOnline: g.isOnline !== undefined ? g.isOnline : (g as any).is_online,
+    }));
+
+    this.memoryStore.poles = fleet.poles.map((p) => {
+      const lat = p.location?.latitude || (p as any).latitude || 34.2165;
+      const lng = p.location?.longitude || (p as any).longitude || 74.7725;
+      return {
+        ...p,
+        ulb_id: (p as any).ulb_id || p.ulbId,
+        ulbId: p.ulbId || (p as any).ulb_id,
+        street_id: (p as any).street_id || p.streetId,
+        streetId: p.streetId || (p as any).street_id,
+        external_code: (p as any).external_code || p.externalCode,
+        externalCode: p.externalCode || (p as any).external_code,
+        height_meters: (p as any).height_meters || p.heightMeters,
+        heightMeters: p.heightMeters || (p as any).height_meters,
+        latitude: lat,
+        longitude: lng,
+        location: { latitude: lat, longitude: lng },
+      };
+    });
+
+    this.memoryStore.luminaires = fleet.luminaires.map((l) => ({
+      ...l,
+      ulb_id: (l as any).ulb_id || l.ulbId,
+      ulbId: l.ulbId || (l as any).ulb_id,
+      pole_id: (l as any).pole_id || l.poleId,
+      poleId: l.poleId || (l as any).pole_id,
+      feeder_id: (l as any).feeder_id || l.feederId,
+      feederId: l.feederId || (l as any).feeder_id,
+      lamp_type: (l as any).lamp_type || l.lampType,
+      lampType: l.lampType || (l as any).lamp_type,
+      phase_connection: (l as any).phase_connection || l.phaseConnection,
+      phaseConnection: l.phaseConnection || (l as any).phase_connection,
+    }));
+
+    this.memoryStore.devices = fleet.devices.map((d) => ({
+      ...d,
+      ulb_id: d.ulb_id,
+      ulbId: d.ulb_id,
+      luminaire_id: d.luminaire_id,
+      luminaireId: d.luminaire_id,
+      feeder_id: d.feeder_id,
+      feederId: d.feeder_id,
+      gateway_id: d.gateway_id,
+      gatewayId: d.gateway_id,
+      adapter_key: d.adapter_key,
+      adapterKey: d.adapter_key,
+      external_id: d.external_id,
+      externalId: d.external_id,
+      desired_on: d.desired_on,
+      desiredOn: d.desired_on,
+      reported_on: d.reported_on,
+      reportedOn: d.reported_on,
+      is_online: d.is_online,
+      isOnline: d.is_online,
+    }));
+
     this.seedHistoricalRollups();
     this.logger.log(`[DatabaseService] Seeded full fleet of ${fleet.totalLuminaires} streetlights (seed: ${seed}) with rollups`);
     return fleet;

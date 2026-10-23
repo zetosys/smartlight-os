@@ -110,10 +110,17 @@ export interface GeoJsonGeometryPoint {
   coordinates: [number, number]; // [lng, lat] per GeoJSON RFC 7946
 }
 
+export interface GeoJsonGeometryPolygon {
+  type: 'Polygon';
+  coordinates: [number, number][][];
+}
+
+export type GeoJsonGeometry = GeoJsonGeometryPoint | GeoJsonGeometryPolygon;
+
 export interface GeoJsonFeature<P = Record<string, unknown>> {
   type: 'Feature';
   id?: string;
-  geometry: GeoJsonGeometryPoint;
+  geometry: GeoJsonGeometry;
   properties: P;
 }
 

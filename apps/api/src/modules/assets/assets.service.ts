@@ -66,7 +66,7 @@ export class AssetsService {
   public getFeeders(ulbId?: string) {
     let feeders = this.db.memoryStore.feeders;
     if (ulbId) {
-      feeders = feeders.filter((f) => f.ulb_id === ulbId);
+      feeders = feeders.filter((f) => (f.ulb_id || (f as any).ulbId) === ulbId);
     }
     return feeders;
   }
@@ -74,62 +74,93 @@ export class AssetsService {
   public getGateways(ulbId?: string) {
     let gateways = this.db.memoryStore.gateways;
     if (ulbId) {
-      gateways = gateways.filter((g) => g.ulb_id === ulbId);
+      gateways = gateways.filter((g) => (g.ulb_id || (g as any).ulbId) === ulbId);
     }
     return gateways;
+  }
+
+  public getZones(ulbId?: string) {
+    let zones = this.db.memoryStore.zones;
+    if (ulbId) {
+      zones = zones.filter((z) => (z.ulb_id || (z as any).ulbId) === ulbId);
+    }
+    return zones;
   }
 
   public getPoles(ulbId?: string) {
     let poles = this.db.memoryStore.poles;
     if (ulbId) {
-      poles = poles.filter((p) => p.ulb_id === ulbId);
+      poles = poles.filter((p) => (p.ulb_id || (p as any).ulbId) === ulbId);
     }
 
     return poles.map((p) => {
-      const luminaire = this.db.memoryStore.luminaires.find((l) => l.pole_id === p.id);
+      const luminaire = this.db.memoryStore.luminaires.find(
+        (l) => (l.pole_id || (l as any).poleId) === p.id,
+      );
       const feeder = luminaire
-        ? this.db.memoryStore.feeders.find((f) => f.id === luminaire.feeder_id)
+        ? this.db.memoryStore.feeders.find(
+            (f) => f.id === (luminaire.feeder_id || (luminaire as any).feederId),
+          )
         : null;
       const device = luminaire
-        ? this.db.memoryStore.devices.find((d) => d.luminaire_id === luminaire.id)
+        ? this.db.memoryStore.devices.find(
+            (d) => (d.luminaire_id || (d as any).luminaireId) === luminaire.id,
+          )
         : null;
-      const street = p.street_id
-        ? this.db.memoryStore.streets.find((s) => s.id === p.street_id)
+      const street = (p.street_id || (p as any).streetId)
+        ? this.db.memoryStore.streets.find((s) => s.id === (p.street_id || (p as any).streetId))
         : null;
+
+      const pUlbId = p.ulb_id || (p as any).ulbId;
+      const isKtr = pUlbId === '22222222-2222-2222-2222-222222222222';
+      const lat = p.latitude || (p as any).location?.latitude || (isKtr ? 32.9925 : 34.2165);
+      const lng = p.longitude || (p as any).location?.longitude || (isKtr ? 74.9318 : 74.7725);
 
       return {
         ...p,
+        ulb_id: pUlbId,
+        external_code: p.external_code || (p as any).externalCode,
+        height_meters: p.height_meters || (p as any).heightMeters || 8.5,
         location: {
-          latitude: p.latitude || 34.2165,
-          longitude: p.longitude || 74.7725,
+          latitude: lat,
+          longitude: lng,
         },
-        streetName: street?.name || 'Main Route',
-        feederName: feeder?.name || 'Feeder Panel',
-        feederPanelCode: feeder?.panel_code || 'N/A',
-        luminaireWattage: luminaire?.wattage ?? 70,
-        lampType: luminaire?.lamp_type ?? 'LED',
-        deviceExternalId: device?.external_id || 'N/A',
-        isOnline: device?.is_online ?? true,
-        reportedOn: device?.reported_on ?? false,
-        desiredOn: device?.desired_on ?? false,
+        streetName: street?.name || (p as any).streetName || 'Main Route',
+        feederId: feeder?.id || (luminaire ? (luminaire.feeder_id || (luminaire as any).feederId) : (p as any).feederId) || null,
+        feederName: feeder?.name || (p as any).feederName || 'Feeder Panel',
+        feederPanelCode: feeder?.panel_code || (feeder as any)?.panelCode || (p as any).feederPanelCode || 'N/A',
+        luminaireWattage: luminaire?.wattage ?? (p as any).luminaireWattage ?? 70,
+        lampType: luminaire?.lamp_type ?? (luminaire as any)?.lampType ?? 'LED',
+        phaseConnection: luminaire?.phase_connection ?? (luminaire as any)?.phaseConnection ?? 'R',
+        deviceExternalId: device?.external_id || (p as any).deviceExternalId || 'N/A',
+        isOnline: device ? ((device as any).is_online ?? (device as any).isOnline ?? true) : ((p as any).isOnline ?? true),
+        reportedOn: device ? ((device as any).reported_on ?? (device as any).reportedOn ?? false) : ((p as any).reportedOn ?? false),
+        desiredOn: device ? ((device as any).desired_on ?? (device as any).desiredOn ?? false) : ((p as any).desiredOn ?? false),
       };
     });
   }
 
   public getPoleById(id: string) {
-    const p = this.db.memoryStore.poles.find((pole) => pole.id === id || pole.external_code === id);
+    const p = this.db.memoryStore.poles.find((pole) => pole.id === id || (pole.external_code || (pole as any).externalCode) === id);
     if (!p) {
       throw new NotFoundException(`Pole with identifier '${id}' not found`);
     }
-    const luminaire = this.db.memoryStore.luminaires.find((l) => l.pole_id === p.id);
-    const feeder = luminaire ? this.db.memoryStore.feeders.find((f) => f.id === luminaire.feeder_id) : null;
-    const device = luminaire ? this.db.memoryStore.devices.find((d) => d.luminaire_id === luminaire.id) : null;
+    const luminaire = this.db.memoryStore.luminaires.find((l) => (l.pole_id || (l as any).poleId) === p.id);
+    const feeder = luminaire ? this.db.memoryStore.feeders.find((f) => f.id === (luminaire.feeder_id || (luminaire as any).feederId)) : null;
+    const device = luminaire ? this.db.memoryStore.devices.find((d) => (d.luminaire_id || (d as any).luminaireId) === luminaire.id) : null;
+
+    const pUlbId = p.ulb_id || (p as any).ulbId;
+    const isKtr = pUlbId === '22222222-2222-2222-2222-222222222222';
+    const lat = p.latitude || (p as any).location?.latitude || (isKtr ? 32.9925 : 34.2165);
+    const lng = p.longitude || (p as any).location?.longitude || (isKtr ? 74.9318 : 74.7725);
 
     return {
       ...p,
+      ulb_id: pUlbId,
+      external_code: p.external_code || (p as any).externalCode,
       location: {
-        latitude: p.latitude || 34.2165,
-        longitude: p.longitude || 74.7725,
+        latitude: lat,
+        longitude: lng,
       },
       luminaire: luminaire || null,
       feeder: feeder || null,
@@ -154,13 +185,55 @@ export class AssetsService {
       return lng >= bbox[0] && lat >= bbox[1] && lng <= bbox[2] && lat <= bbox[3];
     };
 
-    // 1. Poles Features
-    if (type === 'all' || type === 'poles') {
+    const targetType = (type || 'all').toLowerCase();
+    const matchesLayer = (layerName: string) => {
+      if (layerName === 'zones') {
+        // Only include zones if explicitly requested via 'zones' or 'all_with_zones' to ensure Point compatibility for 'all'
+        return targetType.includes('zone');
+      }
+      if (targetType === 'all') return true;
+      const parts = targetType.split(',').map((s) => s.trim().toLowerCase());
+      if (layerName === 'poles' || layerName === 'luminaires') {
+        return parts.includes('poles') || parts.includes('luminaires');
+      }
+      return parts.includes(layerName);
+    };
+
+    // 1. Poles / Luminaires Features
+    if (matchesLayer('poles')) {
       const poles = this.getPoles(ulbId);
       for (const p of poles) {
         const lng = p.location.longitude;
         const lat = p.location.latitude;
         if (inBbox(lng, lat)) {
+          // Check for active alerts on this luminaire/device
+          const activeAlerts = this.db.memoryStore.alerts.filter(
+            (a) =>
+              (a.status === 'OPEN' || a.status === 'ACKNOWLEDGED') &&
+              (a.device_id === p.id ||
+                a.device_id === p.deviceExternalId ||
+                (p as any).device_id === a.device_id),
+          );
+
+          let status: 'online_on' | 'online_off' | 'critical_fault' | 'major_fault' | 'warning' | 'comm_loss' = 'online_off';
+          const crit = activeAlerts.find((a) => a.severity === 'CRITICAL');
+          const maj = activeAlerts.find((a) => a.severity === 'MAJOR');
+          const warn = activeAlerts.find((a) => a.severity === 'WARNING');
+
+          if (crit) {
+            status = 'critical_fault';
+          } else if (maj) {
+            status = 'major_fault';
+          } else if (warn) {
+            status = 'warning';
+          } else if (!p.isOnline) {
+            status = 'comm_loss';
+          } else if (p.reportedOn) {
+            status = 'online_on';
+          } else {
+            status = 'online_off';
+          }
+
           features.push({
             type: 'Feature',
             id: p.id,
@@ -174,12 +247,23 @@ export class AssetsService {
               externalCode: p.external_code,
               heightMeters: p.height_meters,
               wattage: p.luminaireWattage,
+              lampType: p.lampType,
+              feederId: p.feederId,
               feederName: p.feederName,
               feederPanelCode: p.feederPanelCode,
+              phaseConnection: p.phaseConnection,
               deviceExternalId: p.deviceExternalId,
               isOnline: p.isOnline,
               reportedOn: p.reportedOn,
               desiredOn: p.desiredOn,
+              status,
+              activeAlertCount: activeAlerts.length,
+              activeAlertSeverity: activeAlerts[0]?.severity || null,
+              activeAlertCode: activeAlerts[0]?.code || null,
+              voltage: p.reportedOn ? 228.4 : 230.1,
+              currentAmps: p.reportedOn ? +(p.luminaireWattage / (228.4 * 0.98)).toFixed(2) : 0,
+              powerFactor: p.reportedOn ? 0.98 : 0,
+              temperatureC: 38.2,
             },
           });
         }
@@ -187,15 +271,28 @@ export class AssetsService {
     }
 
     // 2. Feeders Features
-    if (type === 'all' || type === 'feeders') {
+    if (matchesLayer('feeders')) {
       const feeders = this.getFeeders(ulbId);
+      const allPoles = this.getPoles(ulbId);
+
       for (const f of feeders) {
-        const defaultLng = f.ulb_id === '11111111-1111-1111-1111-111111111111' ? 74.7725 : 74.9318;
-        const defaultLat = f.ulb_id === '11111111-1111-1111-1111-111111111111' ? 34.2165 : 32.9925;
-        const lng = f.location?.longitude || defaultLng;
-        const lat = f.location?.latitude || defaultLat;
+        const isGbl = (f.ulb_id || (f as any).ulbId) === '11111111-1111-1111-1111-111111111111';
+        const defaultLng = isGbl ? 74.7725 : 74.9318;
+        const defaultLat = isGbl ? 34.2165 : 32.9925;
+        const lng = f.location?.longitude || (f as any).longitude || defaultLng;
+        const lat = f.location?.latitude || (f as any).latitude || defaultLat;
 
         if (inBbox(lng, lat)) {
+          const pCode = f.panel_code || (f as any).panelCode;
+          const connectedPoles = allPoles.filter(
+            (p) => p.feederId === f.id || p.feederPanelCode === pCode,
+          );
+          const activePoles = connectedPoles.filter((p) => p.reportedOn);
+          const activeLoadKw = activePoles.reduce(
+            (sum, p) => sum + (p.luminaireWattage || 70) / 1000,
+            0,
+          );
+
           features.push({
             type: 'Feature',
             id: f.id,
@@ -207,10 +304,107 @@ export class AssetsService {
               assetType: 'FEEDER',
               id: f.id,
               name: f.name,
-              panelCode: f.panel_code,
-              capacityKw: f.capacity_kw,
-              meterNumber: f.meter_number,
+              panelCode: pCode,
+              capacityKw: f.capacity_kw || (f as any).capacityKw || 30.0,
+              meterNumber: f.meter_number || (f as any).meterNumber || 'UNMETERED',
               phase: f.phase || '3-PHASE',
+              connectedLuminairesCount: connectedPoles.length,
+              activeLuminairesCount: activePoles.length,
+              activeLoadKw: +(activeLoadKw).toFixed(2),
+              status: 'healthy',
+            },
+          });
+        }
+      }
+    }
+
+    // 3. Gateways Features
+    if (matchesLayer('gateways')) {
+      const gateways = this.getGateways(ulbId);
+      const feeders = this.getFeeders(ulbId);
+
+      for (const g of gateways) {
+        const gUlbId = g.ulb_id || (g as any).ulbId;
+        const isGbl = gUlbId === '11111111-1111-1111-1111-111111111111';
+        const defaultLng = isGbl ? 74.7725 : 74.9318;
+        const defaultLat = isGbl ? 34.2165 : 32.9925;
+
+        const feeder = feeders.find(
+          (f) => f.id === (g.feeder_id || (g as any).feederId),
+        );
+        const lng = (g as any).location?.longitude || feeder?.location?.longitude || defaultLng;
+        const lat = (g as any).location?.latitude || feeder?.location?.latitude || defaultLat;
+
+        if (inBbox(lng, lat)) {
+          const isOnline =
+            (g as any).is_online !== undefined
+              ? (g as any).is_online
+              : ((g as any).isOnline ?? true);
+
+          features.push({
+            type: 'Feature',
+            id: g.id,
+            geometry: {
+              type: 'Point',
+              coordinates: [lng, lat],
+            },
+            properties: {
+              assetType: 'GATEWAY',
+              id: g.id,
+              name: g.name,
+              externalCode: g.external_code || (g as any).externalCode,
+              ipAddress: g.ip_address || (g as any).ipAddress,
+              isOnline,
+              status: isOnline ? 'online' : 'offline',
+              feederId: g.feeder_id || (g as any).feederId,
+            },
+          });
+        }
+      }
+    }
+
+    // 4. Zones Features (Polygons)
+    if (matchesLayer('zones')) {
+      const zones = this.getZones(ulbId);
+      for (const z of zones) {
+        const zUlbId = z.ulb_id || (z as any).ulbId;
+        const isGbl = zUlbId === '11111111-1111-1111-1111-111111111111';
+        const code = z.code || '';
+
+        let polyCoords: [number, number][][];
+        if (code.includes('GBL-Z1') || z.name.includes('Main Town')) {
+          polyCoords = [[[74.755, 34.205], [74.790, 34.205], [74.790, 34.228], [74.755, 34.228], [74.755, 34.205]]];
+        } else if (code.includes('GBL-Z2') || z.name.includes('Tullamulla')) {
+          polyCoords = [[[74.730, 34.220], [74.765, 34.220], [74.765, 34.250], [74.730, 34.250], [74.730, 34.220]]];
+        } else if (code.includes('GBL-Z3') || z.name.includes('Duderhama')) {
+          polyCoords = [[[74.775, 34.210], [74.815, 34.210], [74.815, 34.240], [74.775, 34.240], [74.775, 34.210]]];
+        } else if (code.includes('KTR-Z1') || z.name.includes('Shrine')) {
+          polyCoords = [[[74.915, 32.980], [74.945, 32.980], [74.945, 33.008], [74.915, 33.008], [74.915, 32.980]]];
+        } else if (code.includes('KTR-Z2') || z.name.includes('Railway')) {
+          polyCoords = [[[74.920, 32.975], [74.955, 32.975], [74.955, 32.998], [74.920, 32.998], [74.920, 32.975]]];
+        } else {
+          const cLat = isGbl ? 34.2165 : 32.9925;
+          const cLng = isGbl ? 74.7725 : 74.9318;
+          polyCoords = [[[cLng - 0.02, cLat - 0.02], [cLng + 0.02, cLat - 0.02], [cLng + 0.02, cLat + 0.02], [cLng - 0.02, cLat + 0.02], [cLng - 0.02, cLat - 0.02]]];
+        }
+
+        // Check if any polygon coordinate is inside bbox
+        const inPolyBbox = polyCoords[0].some(([lng, lat]) => inBbox(lng, lat));
+
+        if (inPolyBbox) {
+          features.push({
+            type: 'Feature',
+            id: z.id,
+            geometry: {
+              type: 'Polygon',
+              coordinates: polyCoords,
+            },
+            properties: {
+              assetType: 'ZONE',
+              id: z.id,
+              name: z.name,
+              code: z.code,
+              ulbId: zUlbId,
             },
           });
         }
