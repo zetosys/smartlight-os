@@ -1,11 +1,30 @@
 'use client';
 
-import React from 'react';
-import { useUlb, SEED_ACCOUNTS } from '../context/UlbContext';
-import { SimulatedBadge, StatusBadge } from '@smartlight/ui';
-import { Building2, User, ChevronDown, Activity } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
+import { useUlb, SEED_ACCOUNTS, INITIAL_ULBS } from '../context/UlbContext';
+import {
+  Building2,
+  User,
+  ChevronDown,
+  Activity,
+  Bell,
+  PanelLeft,
+  Check,
+  ShieldCheck,
+  KeyRound,
+  Settings,
+  Sparkles,
+  MapPin,
+  Clock,
+} from 'lucide-react';
 
-export const TopBar: React.FC = () => {
+interface TopBarProps {
+  onToggleSidebar?: () => void;
+  isSidebarOpen?: boolean;
+}
+
+export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen = true }) => {
   const {
     selectedUlb,
     allUlbs,
@@ -15,97 +34,327 @@ export const TopBar: React.FC = () => {
     isBackendOnline,
   } = useUlb();
 
+  // Custom Dropdown Open States
+  const [isUlbMenuOpen, setIsUlbMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
+  const ulbMenuRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close menus on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ulbMenuRef.current && !ulbMenuRef.current.contains(e.target as Node)) {
+        setIsUlbMenuOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Live IST Clock
+  const [currentTime, setCurrentTime] = useState<string>('');
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setCurrentTime(
+        now.toLocaleTimeString('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        }) + ' IST',
+      );
+    };
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+  };
+
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'PLATFORM_ADMIN':
+        return 'bg-purple-500/15 text-purple-400 border-purple-500/30';
+      case 'CONTROL_OPERATOR':
+        return 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+      case 'TECHNICIAN':
+        return 'bg-sky-500/15 text-sky-400 border-sky-500/30';
+      case 'AUDITOR':
+        return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+      default:
+        return 'bg-slate-700 text-slate-300 border-slate-600';
+    }
+  };
+
   return (
-    <header className="h-16 border-b border-slate-800 bg-slate-900/90 backdrop-blur px-6 flex items-center justify-between sticky top-0 z-30">
-      {/* Left: Branding & Tenant Context */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-bold text-slate-950 text-sm shadow-lg shadow-amber-500/20">
+    <header className="h-16 border-b border-slate-800 bg-slate-900/95 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40 select-none">
+      {/* Left Cluster: Sidebar Toggle, Brand, & Municipal Scope Switcher */}
+      <div className="flex items-center gap-3 md:gap-4">
+        {/* Sidebar Toggle Button */}
+        {onToggleSidebar && (
+          <button
+            onClick={onToggleSidebar}
+            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors focus:outline-none focus:ring-1 focus:ring-amber-500"
+            title={isSidebarOpen ? 'Collapse Navigation Sidebar' : 'Expand Navigation Sidebar'}
+            aria-label="Toggle Navigation Sidebar"
+          >
+            <PanelLeft className="w-5 h-5" />
+          </button>
+        )}
+
+        {/* Brand Identity */}
+        <Link href="/dashboard" className="flex items-center gap-2.5 group">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-black text-slate-950 text-sm shadow-md shadow-amber-500/20 group-hover:scale-105 transition-transform">
             SL
           </div>
-          <div>
-            <div className="text-sm font-semibold tracking-wide text-white flex items-center gap-2">
-              SmartLight OS
-              <span className="text-[10px] font-mono bg-slate-800 text-slate-300 px-1.5 py-0.2 rounded border border-slate-700">
-                v0.1.0-alpha
+          <div className="hidden sm:block">
+            <div className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
+              <span>SmartLight OS</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold">
+                SLMCS
               </span>
             </div>
-            <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">
+            <div className="text-[10px] text-slate-400 font-mono tracking-wider uppercase -mt-0.5">
               Control Room System
             </div>
           </div>
-        </div>
+        </Link>
 
-        <div className="h-6 w-px bg-slate-800 mx-2" />
+        <div className="h-5 w-px bg-slate-800 hidden sm:block mx-1" />
 
-        {/* ULB Context Selector */}
-        <div className="flex items-center gap-2">
-          <Building2 className="w-4 h-4 text-amber-400" />
-          <span className="text-xs text-slate-400 font-medium">ULB Scope:</span>
-          <select
-            className="bg-slate-800 border border-slate-700 text-xs text-slate-200 rounded px-2.5 py-1.5 focus:outline-none focus:border-amber-500 transition-colors cursor-pointer"
-            value={selectedUlb?.id || ''}
-            onChange={(e) => setSelectedUlbId(e.target.value)}
+        {/* Municipal Scope Selector Dropdown */}
+        <div className="relative" ref={ulbMenuRef}>
+          <button
+            onClick={() => setIsUlbMenuOpen(!isUlbMenuOpen)}
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 text-xs text-slate-200 transition shadow-sm focus:outline-none focus:ring-1 focus:ring-amber-500"
+            title="Switch Municipal ULB Scope"
           >
-            {allUlbs.map((ulb) => (
-              <option key={ulb.id} value={ulb.id}>
-                {ulb.name} ({ulb.code})
-              </option>
-            ))}
-          </select>
-        </div>
+            <Building2 className="w-3.5 h-3.5 text-amber-400" />
+            <span className="font-semibold max-w-[140px] md:max-w-[180px] truncate">
+              {selectedUlb?.name.replace('Municipal Council', 'MC').replace('Municipal Committee', 'MC') || 'All ULBs'}
+            </span>
+            <span className="text-[10px] font-mono px-1 rounded bg-slate-700/80 text-slate-300">
+              {selectedUlb?.code || 'ALL'}
+            </span>
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isUlbMenuOpen ? 'rotate-180' : ''}`} />
+          </button>
 
-        <SimulatedBadge />
+          {/* ULB Popover Menu */}
+          {isUlbMenuOpen && (
+            <div className="absolute left-0 mt-2 w-72 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="px-2 py-1.5 text-[10px] uppercase font-mono tracking-wider text-slate-400 font-semibold border-b border-slate-800 mb-1 flex items-center justify-between">
+                <span>Select Municipal Jurisdiction</span>
+                <span className="text-amber-400 font-bold">4,608 Fleet</span>
+              </div>
+
+              <div className="space-y-1">
+                {allUlbs.map((ulb) => {
+                  const isSelected = selectedUlb?.id === ulb.id;
+                  const isGbl = ulb.code === 'ULB-GBL';
+                  const fleetCount = isGbl ? '2,740' : '1,868';
+                  const primaryCorridor = isGbl ? 'NH-1D & Beehama' : 'Banganga Shrine Route';
+
+                  return (
+                    <button
+                      key={ulb.id}
+                      onClick={() => {
+                        setSelectedUlbId(ulb.id);
+                        setIsUlbMenuOpen(false);
+                      }}
+                      className={`w-full text-left p-2.5 rounded-lg text-xs flex items-center justify-between transition ${
+                        isSelected
+                          ? 'bg-amber-500/15 border border-amber-500/40 text-amber-300 font-semibold'
+                          : 'hover:bg-slate-800/80 text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <MapPin className={`w-4 h-4 mt-0.5 ${isSelected ? 'text-amber-400' : 'text-slate-500'}`} />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-white">{ulb.name}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5 font-mono">
+                            <span>{ulb.code}</span>
+                            <span>•</span>
+                            <span>{primaryCorridor}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="font-mono font-bold text-[11px] text-amber-400">{fleetCount}</div>
+                        <div className="text-[9px] text-slate-500">Luminaires</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-2 pt-2 border-t border-slate-800 text-[10px] text-slate-400 px-2 flex justify-between items-center font-mono">
+                <span>Sovereign Region: J&amp;K, India</span>
+                <span className="text-emerald-400 font-semibold">PostGIS 4326</span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Right: Health Pill & Active User Switcher */}
-      <div className="flex items-center gap-4">
-        {/* Backend Connectivity Status */}
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-slate-800/80 border border-slate-700/60 text-xs font-mono">
-          <Activity
-            className={`w-3.5 h-3.5 ${
-              isBackendOnline ? 'text-emerald-400 animate-pulse' : 'text-amber-400'
-            }`}
-          />
-          <span className="text-slate-400">API:</span>
-          <span className={isBackendOnline ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold'}>
-            {isBackendOnline ? 'ONLINE' : 'SANDBOX MODE'}
-          </span>
+      {/* Center Cluster: Live IST Clock & Solar Phase (Desktop only) */}
+      <div className="hidden lg:flex items-center gap-3 px-3 py-1 rounded-full bg-slate-950/60 border border-slate-800 text-xs font-mono text-slate-300">
+        <Clock className="w-3.5 h-3.5 text-amber-400" />
+        <span>{currentTime || 'IST Local Time'}</span>
+        <span className="text-slate-700">|</span>
+        <span className="text-emerald-400 flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          Civil Twilight Engine Active
+        </span>
+      </div>
+
+      {/* Right Cluster: Connectivity Status, Alerts, & User Profile Dropdown */}
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        {/* Backend Connectivity Status Pill */}
+        <div
+          className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-mono font-medium ${
+            isBackendOnline
+              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+              : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+          }`}
+          title={isBackendOnline ? 'Backend API (Port 4000) Connected' : 'Simulated Resilient Memory-Store Mode'}
+        >
+          <Activity className={`w-3 h-3 ${isBackendOnline ? 'text-emerald-400 animate-pulse' : 'text-amber-400'}`} />
+          <span>{isBackendOnline ? 'API ONLINE' : 'SANDBOX'}</span>
         </div>
 
-        {/* User / Scoped Role Selector */}
-        <div className="flex items-center gap-2 border-l border-slate-800 pl-4">
-          <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300">
-            <User className="w-3.5 h-3.5" />
-          </div>
-          <div className="text-right">
-            <div className="text-xs font-medium text-slate-200">
-              {currentUser.name}
-            </div>
-            <div className="text-[10px] font-mono text-amber-400">
-              {currentUser.role}
-            </div>
-          </div>
+        {/* Quick Alerts Bell with Live Counter */}
+        <Link
+          href="/alerts"
+          className="relative p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          title="Open Active System Alarms Queue"
+        >
+          <Bell className="w-4 h-4" />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-slate-900" />
+        </Link>
 
-          <select
-            aria-label="Switch User Profile"
-            className="bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1 focus:outline-none focus:border-amber-500 cursor-pointer ml-1"
-            value={currentUser.email}
-            onChange={(e) => setCurrentAccount(e.target.value)}
-          >
-            {SEED_ACCOUNTS.map((acc) => (
-              <option key={acc.email} value={acc.email}>
-                Switch: {acc.name} ({acc.role})
-              </option>
-            ))}
-          </select>
+        <div className="h-5 w-px bg-slate-800 mx-0.5" />
 
-          <a
-            href="/login"
-            className="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded text-[11px] font-semibold transition ml-1"
+        {/* User Profile & Role Switcher Popover */}
+        <div className="relative" ref={userMenuRef}>
+          <button
+            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+            className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 text-xs transition focus:outline-none focus:ring-1 focus:ring-amber-500"
+            title="User Profile & Quick Account Switcher"
           >
-            MFA Login
-          </a>
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 text-slate-950 font-black text-xs flex items-center justify-center shadow-inner">
+              {getInitials(currentUser.name)}
+            </div>
+
+            <div className="text-left hidden md:block">
+              <div className="text-xs font-semibold text-slate-200 leading-tight">
+                {currentUser.name.split(' ')[0]} {currentUser.name.split(' ')[1]?.[0] || ''}.
+              </div>
+              <div className="text-[10px] font-mono text-amber-400 leading-tight">
+                {currentUser.role.replace('_', ' ')}
+              </div>
+            </div>
+
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {/* User Popover Menu */}
+          {isUserMenuOpen && (
+            <div className="absolute right-0 mt-2 w-80 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              {/* User Profile Header */}
+              <div className="pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 text-slate-950 font-black text-sm flex items-center justify-center shadow-md">
+                    {getInitials(currentUser.name)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-white text-xs truncate">{currentUser.name}</div>
+                    <div className="text-[11px] text-slate-400 font-mono truncate">{currentUser.email}</div>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold border ${getRoleBadgeColor(currentUser.role)}`}>
+                        {currentUser.role}
+                      </span>
+                      <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                        <ShieldCheck className="w-2.5 h-2.5" />
+                        2FA Active
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Switch Demo Account Section */}
+              <div className="py-2">
+                <div className="px-1 py-1 text-[10px] uppercase font-mono tracking-wider text-slate-400 font-semibold flex items-center justify-between">
+                  <span>Switch Role / Profile</span>
+                  <span className="text-slate-500">Demo RBAC</span>
+                </div>
+
+                <div className="space-y-1 mt-1 max-h-48 overflow-y-auto pr-1">
+                  {SEED_ACCOUNTS.map((acc) => {
+                    const isCurrent = acc.email === currentUser.email;
+
+                    return (
+                      <button
+                        key={acc.email}
+                        onClick={() => {
+                          setCurrentAccount(acc.email);
+                          setIsUserMenuOpen(false);
+                        }}
+                        className={`w-full text-left px-2 py-1.5 rounded-lg text-xs flex items-center justify-between transition ${
+                          isCurrent
+                            ? 'bg-amber-500/15 border border-amber-500/30 text-amber-300 font-medium'
+                            : 'hover:bg-slate-800 text-slate-300'
+                        }`}
+                      >
+                        <div className="truncate">
+                          <div className="truncate text-white font-medium">{acc.name}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">{acc.role}</div>
+                        </div>
+                        {isCurrent && <Check className="w-4 h-4 text-amber-400 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Footer Quick Links */}
+              <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
+                <Link
+                  href="/login"
+                  onClick={() => setIsUserMenuOpen(false)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 font-mono text-[11px] transition"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  MFA Login
+                </Link>
+
+                <Link
+                  href="/settings"
+                  onClick={() => setIsUserMenuOpen(false)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300 font-mono text-[11px] transition"
+                >
+                  <Settings className="w-3.5 h-3.5 text-slate-400" />
+                  Settings
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>
