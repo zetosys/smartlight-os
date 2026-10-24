@@ -17,6 +17,7 @@ import {
   FlaskConical,
   Users,
   Settings,
+  Sparkles,
   X,
 } from 'lucide-react';
 
@@ -29,6 +30,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { label: 'Role Portals', href: '/portal', icon: Sparkles, badge: 'RBAC', badgeColor: 'bg-amber-500/20 text-amber-400 border border-amber-500/30' },
   { label: 'Fleet Overview', href: '/dashboard', icon: LayoutDashboard },
   { label: 'GIS Asset Map', href: '/gis', icon: Map },
   { label: 'Geographic Hierarchy', href: '/assets', icon: Layers },

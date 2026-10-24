@@ -334,11 +334,21 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen =
               </div>
 
               {/* Footer Quick Links */}
-              <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
+              <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs gap-2">
+                <Link
+                  href="/portal"
+                  onClick={() => setIsUserMenuOpen(false)}
+                  className="flex items-center gap-1 px-2 py-1.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-mono text-[11px] font-semibold transition"
+                  title="Open dedicated operational portal for current role"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  My Portal
+                </Link>
+
                 <Link
                   href="/login"
                   onClick={() => setIsUserMenuOpen(false)}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 font-mono text-[11px] transition"
+                  className="flex items-center gap-1 px-2 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-[11px] transition"
                 >
                   <KeyRound className="w-3.5 h-3.5" />
                   MFA Login
@@ -347,10 +357,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen =
                 <Link
                   href="/settings"
                   onClick={() => setIsUserMenuOpen(false)}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300 font-mono text-[11px] transition"
+                  className="flex items-center gap-1 px-2 py-1.5 rounded hover:bg-slate-800 text-slate-400 font-mono text-[11px] transition"
                 >
-                  <Settings className="w-3.5 h-3.5 text-slate-400" />
-                  Settings
+                  <Settings className="w-3.5 h-3.5" />
                 </Link>
               </div>
             </div>

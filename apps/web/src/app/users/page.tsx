@@ -17,11 +17,16 @@ import {
   Lock,
   CheckCircle2,
   AlertCircle,
+  Sparkles,
+  Wrench,
+  Power,
+  FileCheck,
+  ArrowRight,
 } from 'lucide-react';
 
 export default function UsersPage() {
   const { currentUser, allUlbs } = useUlb();
-  const [activeTab, setActiveTab] = useState<'users' | 'matrix' | 'ulbs'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'matrix' | 'ulbs' | 'portals'>('users');
   const [userList, setUserList] = useState<UserListItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [roleMatrix, setRoleMatrix] = useState<{ roleCode: string; permissions: PermissionCode[] }[]>([]);
@@ -316,6 +321,18 @@ export default function UsersPage() {
           <Building2 className="w-4 h-4" />
           Registered Municipal Units ({allUlbs.length})
         </button>
+
+        <button
+          onClick={() => setActiveTab('portals')}
+          className={`pb-2.5 flex items-center gap-2 border-b-2 transition ${
+            activeTab === 'portals'
+              ? 'border-amber-400 text-amber-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-amber-400" />
+          Role Portals Showcase
+        </button>
       </div>
 
       {/* TAB 1: USERS LIST */}
@@ -498,6 +515,157 @@ export default function UsersPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* TAB 4: ROLE PORTALS SHOWCASE */}
+      {activeTab === 'portals' && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                Tailored Operational Workspaces for Every Role
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Each municipal persona operates in a specialized portal strictly matching their authorization boundary.
+              </p>
+            </div>
+            <a
+              href="/portal"
+              className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg flex items-center gap-1.5 transition shadow"
+            >
+              <span>Launch Active Portal</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </a>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Field Technician */}
+            <div className="p-5 rounded-xl bg-slate-900 border border-slate-800 space-y-3 flex flex-col justify-between hover:border-slate-700 transition">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="p-2 rounded-lg bg-amber-500/20 text-amber-400">
+                    <Wrench className="w-5 h-5" />
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold">
+                    TECHNICIAN
+                  </span>
+                </div>
+                <h4 className="font-bold text-white text-sm">Field Service &amp; Repair Portal</h4>
+                <p className="text-xs text-slate-400">
+                  Assigned repair work orders, mobile van spare parts inventory deduction, GPS fault pin navigation, and one-click ticket resolution.
+                </p>
+              </div>
+              <a
+                href="/portal"
+                className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg text-center border border-slate-700 transition flex items-center justify-center gap-1.5"
+              >
+                <span>Open Technician Workspace</span>
+                <ArrowRight className="w-3 h-3 text-amber-400" />
+              </a>
+            </div>
+
+            {/* SCADA Operator */}
+            <div className="p-5 rounded-xl bg-slate-900 border border-slate-800 space-y-3 flex flex-col justify-between hover:border-slate-700 transition">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="p-2 rounded-lg bg-sky-500/20 text-sky-400">
+                    <Power className="w-5 h-5" />
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-bold">
+                    OPERATOR
+                  </span>
+                </div>
+                <h4 className="font-bold text-white text-sm">SCADA Control Console</h4>
+                <p className="text-xs text-slate-400">
+                  Direct CCMS feeder contactor switching, emergency all-corridor illumination bypass, civil twilight countdown clock, and electrical telemetry.
+                </p>
+              </div>
+              <a
+                href="/portal"
+                className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg text-center border border-slate-700 transition flex items-center justify-center gap-1.5"
+              >
+                <span>Open Operator Console</span>
+                <ArrowRight className="w-3 h-3 text-sky-400" />
+              </a>
+            </div>
+
+            {/* Auditor */}
+            <div className="p-5 rounded-xl bg-slate-900 border border-slate-800 space-y-3 flex flex-col justify-between hover:border-slate-700 transition">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400">
+                    <FileCheck className="w-5 h-5" />
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
+                    AUDITOR
+                  </span>
+                </div>
+                <h4 className="font-bold text-white text-sm">SLA &amp; Energy Audit Hub</h4>
+                <p className="text-xs text-slate-400">
+                  Read-only proof of 99.8% uptime compliance, burning hours certificates, energy savings proofs in INR, and immutable cryptographic audit stream.
+                </p>
+              </div>
+              <a
+                href="/portal"
+                className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg text-center border border-slate-700 transition flex items-center justify-center gap-1.5"
+              >
+                <span>Open Compliance Hub</span>
+                <ArrowRight className="w-3 h-3 text-emerald-400" />
+              </a>
+            </div>
+
+            {/* Municipal Executive */}
+            <div className="p-5 rounded-xl bg-slate-900 border border-slate-800 space-y-3 flex flex-col justify-between hover:border-slate-700 transition">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="p-2 rounded-lg bg-purple-500/20 text-purple-400">
+                    <Building2 className="w-5 h-5" />
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-bold">
+                    ULB ADMIN
+                  </span>
+                </div>
+                <h4 className="font-bold text-white text-sm">Municipal Executive Portal</h4>
+                <p className="text-xs text-slate-400">
+                  Ward-by-ward electrification progress, staff duty rosters, astronomical dusk/dawn schedule tuning, and citizen complaint monitoring.
+                </p>
+              </div>
+              <a
+                href="/portal"
+                className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg text-center border border-slate-700 transition flex items-center justify-center gap-1.5"
+              >
+                <span>Open Executive Portal</span>
+                <ArrowRight className="w-3 h-3 text-purple-400" />
+              </a>
+            </div>
+
+            {/* Platform Administrator */}
+            <div className="p-5 rounded-xl bg-slate-900 border border-slate-800 space-y-3 flex flex-col justify-between hover:border-slate-700 transition">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="p-2 rounded-lg bg-amber-500/20 text-amber-400">
+                    <Shield className="w-5 h-5" />
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold">
+                    PLATFORM ADMIN
+                  </span>
+                </div>
+                <h4 className="font-bold text-white text-sm">State Master Console</h4>
+                <p className="text-xs text-slate-400">
+                  Full multi-ULB state control, user account provisioning, RBAC role-permission matrix editor, PostGIS engine, and fleet simulator lab.
+                </p>
+              </div>
+              <a
+                href="/portal"
+                className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg text-center border border-slate-700 transition flex items-center justify-center gap-1.5"
+              >
+                <span>Open Platform Console</span>
+                <ArrowRight className="w-3 h-3 text-amber-400" />
+              </a>
+            </div>
+          </div>
         </div>
       )}
 

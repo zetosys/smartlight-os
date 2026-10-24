@@ -32,6 +32,9 @@ export interface SeedAccountOption {
   role: string;
   allowedUlbIds: string[];
   isGlobalAdmin: boolean;
+  title?: string;
+  department?: string;
+  portalView?: 'platform' | 'admin' | 'operator' | 'technician' | 'auditor';
 }
 
 export const SEED_ACCOUNTS: SeedAccountOption[] = [
@@ -41,34 +44,89 @@ export const SEED_ACCOUNTS: SeedAccountOption[] = [
     role: 'PLATFORM_ADMIN',
     allowedUlbIds: ['*'],
     isGlobalAdmin: true,
+    title: 'Chief Platform Administrator',
+    department: 'State Directorate of Urban Local Bodies (JKHUDD)',
+    portalView: 'platform',
+  },
+  {
+    email: 'admin.ganderbal@smartlight.os',
+    name: 'Farooq Shah',
+    role: 'ULB_ADMIN',
+    allowedUlbIds: ['11111111-1111-1111-1111-111111111111'],
+    isGlobalAdmin: false,
+    title: 'Municipal Executive Officer',
+    department: 'Ganderbal Municipal Council',
+    portalView: 'admin',
+  },
+  {
+    email: 'admin.katra@smartlight.os',
+    name: 'Anita Sharma',
+    role: 'ULB_ADMIN',
+    allowedUlbIds: ['22222222-2222-2222-2222-222222222222'],
+    isGlobalAdmin: false,
+    title: 'Municipal Executive Officer',
+    department: 'Katra Municipal Committee',
+    portalView: 'admin',
+  },
+  {
+    email: 'ops.manager@smartlight.os',
+    name: 'Er. Vikram Singh',
+    role: 'OPERATIONS_MANAGER',
+    allowedUlbIds: ['*'],
+    isGlobalAdmin: false,
+    title: 'Superintending Operations Engineer',
+    department: 'Regional Streetlighting Operations',
+    portalView: 'operator',
   },
   {
     email: 'operator.ganderbal@smartlight.os',
-    name: 'Tariq Ahmad (Ganderbal Ops)',
+    name: 'Tariq Ahmad',
     role: 'CONTROL_OPERATOR',
     allowedUlbIds: ['11111111-1111-1111-1111-111111111111'],
     isGlobalAdmin: false,
+    title: 'SCADA Control Room Operator',
+    department: 'Ganderbal Central Control Station',
+    portalView: 'operator',
   },
   {
     email: 'operator.katra@smartlight.os',
-    name: 'Rajesh Sharma (Katra Ops)',
+    name: 'Rajesh Sharma',
     role: 'CONTROL_OPERATOR',
     allowedUlbIds: ['22222222-2222-2222-2222-222222222222'],
     isGlobalAdmin: false,
+    title: 'SCADA Control Room Operator',
+    department: 'Katra Pilgrim Corridor Station',
+    portalView: 'operator',
+  },
+  {
+    email: 'maint.supervisor@smartlight.os',
+    name: 'Bilal Wani',
+    role: 'MAINTENANCE_SUPERVISOR',
+    allowedUlbIds: ['11111111-1111-1111-1111-111111111111'],
+    isGlobalAdmin: false,
+    title: 'Junior Engineer (Maintenance & Dispatch)',
+    department: 'Ganderbal Field Engineering Unit',
+    portalView: 'technician',
   },
   {
     email: 'tech.ganderbal@smartlight.os',
-    name: 'Mohammad Iqbal (Field Tech)',
+    name: 'Mohammad Iqbal',
     role: 'TECHNICIAN',
     allowedUlbIds: ['11111111-1111-1111-1111-111111111111'],
     isGlobalAdmin: false,
+    title: 'Senior Field Technician',
+    department: 'Mobile Streetlight Repair Team',
+    portalView: 'technician',
   },
   {
     email: 'auditor@smartlight.os',
-    name: 'Sunil Verma (Auditor)',
+    name: 'Sunil Verma',
     role: 'AUDITOR',
     allowedUlbIds: ['*'],
     isGlobalAdmin: false,
+    title: 'Third-Party Energy & SLA Auditor',
+    department: 'Independent Compliance Verification Agency',
+    portalView: 'auditor',
   },
 ];
 
