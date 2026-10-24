@@ -15,9 +15,9 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
           onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
           isSidebarOpen={isSidebarOpen}
         />
-        <div className="flex flex-1 relative overflow-hidden">
+        <div className="flex flex-1 relative">
           <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-          <main className="flex-1 p-4 md:p-6 overflow-y-auto bg-slate-950/60 max-w-full transition-all duration-200">
+          <main className="flex-1 p-4 md:p-6 overflow-y-auto bg-slate-950/60 min-w-0 max-w-full transition-all duration-200">
             {children}
           </main>
         </div>

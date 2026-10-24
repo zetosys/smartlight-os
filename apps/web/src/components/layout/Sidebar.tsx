@@ -25,22 +25,23 @@ interface NavItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
+  badgeColor?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Fleet Overview', href: '/dashboard', icon: LayoutDashboard },
   { label: 'GIS Asset Map', href: '/gis', icon: Map },
-  { label: 'Asset Explorer', href: '/assets', icon: Layers },
+  { label: 'Geographic Hierarchy', href: '/assets', icon: Layers },
   { label: 'Device Registry', href: '/devices', icon: Cpu },
   { label: 'Control Console', href: '/controls', icon: Power },
-  { label: 'Scheduling', href: '/scheduling', icon: Calendar },
-  { label: 'Alerts Queue', href: '/alerts', icon: AlertTriangle, badge: '1' },
-  { label: 'Maintenance', href: '/maintenance', icon: Wrench, badge: '1' },
+  { label: 'Astronomical Schedules', href: '/scheduling', icon: Calendar },
+  { label: 'Alerts Queue', href: '/alerts', icon: AlertTriangle, badge: '1', badgeColor: 'bg-rose-500/20 text-rose-400 border border-rose-500/30' },
+  { label: 'Work Orders & Spares', href: '/maintenance', icon: Wrench, badge: '1', badgeColor: 'bg-amber-500/20 text-amber-400 border border-amber-500/30' },
   { label: 'Energy & Analytics', href: '/analytics', icon: BarChart3 },
-  { label: 'Reports & Audit', href: '/reports', icon: FileText },
-  { label: 'Simulator Lab', href: '/simulator', icon: FlaskConical, badge: 'SIM' },
+  { label: 'Compliance Reports', href: '/reports', icon: FileText },
+  { label: 'Simulator Lab', href: '/simulator', icon: FlaskConical, badge: 'SIM', badgeColor: 'bg-purple-500/20 text-purple-400 border border-purple-500/30' },
   { label: 'Users & Roles', href: '/users', icon: Users },
-  { label: 'Settings', href: '/settings', icon: Settings },
+  { label: 'System Settings', href: '/settings', icon: Settings },
 ];
 
 interface SidebarProps {
@@ -51,48 +52,63 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
   const pathname = usePathname();
 
+  // Only close sidebar on link click if on mobile screens (< 768px)
+  const handleLinkClick = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      onClose?.();
+    }
+  };
+
   return (
     <>
-      {/* Mobile Backdrop Overlay */}
+      {/* Mobile Drawer Backdrop */}
       {isOpen && (
         <div
           onClick={onClose}
-          className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-30 md:hidden animate-in fade-in duration-200"
+          className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 md:hidden animate-in fade-in duration-200"
           aria-hidden="true"
         />
       )}
 
-      {/* Main Sidebar Element */}
+      {/* Sidebar Container */}
       <aside
-        className={`bg-slate-900 border-r border-slate-800 flex flex-col justify-between h-[calc(100vh-4rem)] sticky top-16 select-none transition-all duration-200 z-30 ${
+        className={`bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0 select-none transition-all duration-200 z-40 ${
+          // Mobile: sliding drawer (fixed)
+          // Desktop: sticky pinned sidebar (height = full viewport minus header)
           isOpen
-            ? 'w-64 fixed inset-y-16 left-0 md:static'
-            : 'hidden md:flex md:w-16'
+            ? 'fixed inset-y-0 left-0 w-64 shadow-2xl md:shadow-none md:static md:sticky md:top-16 md:h-[calc(100vh-4rem)]'
+            : 'hidden md:flex md:w-16 md:sticky md:top-16 md:h-[calc(100vh-4rem)]'
         }`}
       >
-        <div className="p-2.5 sm:p-3 space-y-1 overflow-y-auto">
-          {/* Header Row on Mobile with Close Button */}
-          <div className="flex items-center justify-between px-2 py-1.5 md:hidden">
-            <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400 font-semibold">
-              Navigation
-            </span>
+        {/* Navigation Items Scroll Area */}
+        <div className="p-3 space-y-1 overflow-y-auto flex-1">
+          {/* Mobile Drawer Header with Close Button */}
+          <div className="flex items-center justify-between px-2 py-2 mb-2 border-b border-slate-800 md:hidden">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded bg-amber-500 flex items-center justify-center font-bold text-slate-950 text-xs">
+                SL
+              </div>
+              <span className="text-xs font-bold text-white tracking-wide">SmartLight OS</span>
+            </div>
             {onClose && (
               <button
                 onClick={onClose}
-                className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800"
-                aria-label="Close Sidebar"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+                aria-label="Close navigation menu"
               >
                 <X className="w-4 h-4" />
               </button>
             )}
           </div>
 
+          {/* Section Header (Full Mode Only) */}
           {isOpen && (
             <div className="px-3 py-1.5 text-[10px] uppercase font-mono tracking-wider text-slate-400 font-semibold hidden md:block">
               Operations Management
             </div>
           )}
 
+          {/* Nav Items List */}
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href || (item.href === '/dashboard' && pathname === '/');
             const Icon = item.icon;
@@ -101,60 +117,72 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={onClose}
-                title={!isOpen ? item.label : undefined}
+                onClick={handleLinkClick}
                 className={`flex items-center ${
-                  isOpen ? 'justify-between px-3 py-2' : 'justify-center p-2.5'
-                } rounded-lg text-xs font-medium transition-colors group relative ${
+                  isOpen ? 'justify-between px-3 py-2.5' : 'justify-center p-2.5'
+                } rounded-lg text-xs font-medium transition-all group relative ${
                   isActive
-                    ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/70'
+                    ? 'bg-amber-500/15 text-amber-400 font-semibold border border-amber-500/30 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/80'
                 }`}
               >
-                <div className={`flex items-center ${isOpen ? 'gap-2.5' : 'justify-center'}`}>
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-amber-400' : 'text-slate-400 group-hover:text-slate-200'}`} />
+                <div className={`flex items-center ${isOpen ? 'gap-3 min-w-0' : 'justify-center'}`}>
+                  <Icon
+                    className={`w-4 h-4 shrink-0 transition-colors ${
+                      isActive ? 'text-amber-400' : 'text-slate-400 group-hover:text-slate-200'
+                    }`}
+                  />
                   {isOpen && <span className="truncate">{item.label}</span>}
                 </div>
 
-                {/* Badge */}
-                {item.badge && (
+                {/* Badge in Open Mode */}
+                {isOpen && item.badge && (
                   <span
-                    className={`${
-                      isOpen
-                        ? 'px-1.5 py-0.5 text-[10px] font-mono rounded'
-                        : 'absolute -top-1 -right-1 w-2 h-2 rounded-full ring-2 ring-slate-900'
-                    } ${
-                      item.badge === 'SIM'
-                        ? 'bg-amber-500/20 text-amber-400'
-                        : 'bg-rose-500 text-white md:bg-rose-500/20 md:text-rose-400'
+                    className={`px-1.5 py-0.2 text-[10px] font-mono rounded font-semibold shrink-0 ml-2 ${
+                      item.badgeColor || 'bg-slate-800 text-slate-300'
                     }`}
                   >
-                    {isOpen ? item.badge : ''}
+                    {item.badge}
                   </span>
+                )}
+
+                {/* Tooltip on Hover in Compact (w-16) Mode */}
+                {!isOpen && (
+                  <div className="absolute left-full ml-3 px-2.5 py-1.5 rounded-md bg-slate-900 border border-slate-700 text-xs font-medium text-white whitespace-nowrap shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 flex items-center gap-2">
+                    <span>{item.label}</span>
+                    {item.badge && (
+                      <span className={`px-1 py-0.2 text-[9px] font-mono rounded ${item.badgeColor || 'bg-slate-800'}`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
                 )}
               </Link>
             );
           })}
         </div>
 
-        {/* Footer Info */}
+        {/* Footer Info Area */}
         {isOpen ? (
-          <div className="p-3 border-t border-slate-800/80 bg-slate-950/40 text-[11px] text-slate-400 space-y-1">
-            <div className="flex justify-between">
+          <div className="p-3 border-t border-slate-800/80 bg-slate-950/60 text-[11px] text-slate-400 space-y-1">
+            <div className="flex justify-between items-center">
               <span>Tender Reference:</span>
-              <span className="font-mono text-slate-300">NIT-SLMCS-2026</span>
+              <span className="font-mono text-slate-300 font-semibold">NIT-SLMCS-2026</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span>Target Fleet:</span>
-              <span className="font-mono text-amber-400 font-medium">4,608 Lights</span>
+              <span className="font-mono text-amber-400 font-bold">4,608 Lights</span>
             </div>
-            <div className="text-[10px] text-slate-500 pt-1 border-t border-slate-800/60 text-center font-mono">
-              MeitY MeghRaj Sovereign
+            <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-800/60 flex items-center justify-between font-mono">
+              <span>MeitY MeghRaj Cloud</span>
+              <span className="text-emerald-400 font-semibold">Sovereign</span>
             </div>
           </div>
         ) : (
-          <div className="p-2 border-t border-slate-800/80 bg-slate-950/40 text-center">
-            <span className="text-[10px] font-mono text-amber-400 font-bold">4.6K</span>
+          <div className="p-2 border-t border-slate-800/80 bg-slate-950/60 text-center">
+            <span className="text-[10px] font-mono text-amber-400 font-bold block" title="4,608 Streetlights Under Management">
+              4.6K
+            </span>
           </div>
         )}
       </aside>
