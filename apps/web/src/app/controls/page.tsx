@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUlb } from '../../components/context/UlbContext';
 import { ApiClient } from '../../lib/api-client';
+import { generateClientSecureId } from '../../lib/crypto-id';
 import { SimulatedBadge, StatusBadge } from '@smartlight/ui';
 import {
   Power,
@@ -132,7 +133,7 @@ export default function ControlsPage() {
     setActionSuccess(null);
     setActionError(null);
 
-    const idempotencyKey = `cmd-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const idempotencyKey = generateClientSecureId('cmd');
 
     try {
       if (targetScope === 'DEVICE') {

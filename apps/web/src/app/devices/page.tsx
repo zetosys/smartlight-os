@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUlb } from '../../components/context/UlbContext';
 import { ApiClient } from '../../lib/api-client';
+import { generateClientSecureId } from '../../lib/crypto-id';
 import { SimulatedBadge, StatusBadge, StateComparison } from '@smartlight/ui';
 import { Cpu, Power, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
 
@@ -78,7 +79,7 @@ export default function DevicesPage() {
   const handleSendCommand = async (deviceId: string, externalId: string, type: 'TURN_ON' | 'TURN_OFF') => {
     setActionLoading(deviceId);
     setCommandFeedback(null);
-    const idempotencyKey = `ui-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const idempotencyKey = generateClientSecureId('ui');
 
     try {
       const res = await ApiClient.fetch<{ commandId: string; status: string; isIdempotentReplay: boolean }>(

@@ -241,7 +241,7 @@ export default function AssetsPage() {
       ulbId: selectedUlb?.id,
       items: [
         {
-          externalCode: `${prefix}-POLE-${Math.floor(100 + Math.random() * 900)}`,
+          externalCode: `${prefix}-POLE-901`,
           wattage: 70,
           heightMeters: 8.5,
           latitude: +(lat + 0.001).toFixed(4),
@@ -249,7 +249,7 @@ export default function AssetsPage() {
           lampType: 'LED',
         },
         {
-          externalCode: `${prefix}-POLE-${Math.floor(100 + Math.random() * 900)}`,
+          externalCode: `${prefix}-POLE-902`,
           wattage: 110,
           heightMeters: 9.0,
           latitude: +(lat + 0.002).toFixed(4),
@@ -257,7 +257,7 @@ export default function AssetsPage() {
           lampType: 'LED',
         },
         {
-          externalCode: `${prefix}-POLE-${Math.floor(100 + Math.random() * 900)}`,
+          externalCode: `${prefix}-POLE-903`,
           wattage: 35,
           heightMeters: 7.0,
           latitude: +(lat + 0.003).toFixed(4),
@@ -339,7 +339,7 @@ export default function AssetsPage() {
             onClick={() => {
               setPoleForm((prev) => ({
                 ...prev,
-                externalCode: `${selectedUlb?.code || 'GBL'}-POLE-${Math.floor(100 + Math.random() * 900)}`,
+                externalCode: `${selectedUlb?.code || 'GBL'}-POLE-${Date.now().toString().slice(-4)}`,
                 latitude: selectedUlb?.code === 'ULB-GBL' ? 34.2165 : 32.9925,
                 longitude: selectedUlb?.code === 'ULB-GBL' ? 74.7725 : 74.9318,
               }));
