@@ -6,6 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
+import { generateSecureId } from '../../common/crypto-id.util';
 import {
   CreateUserDto,
   UpdateUserDto,
@@ -112,7 +113,7 @@ export class UsersService {
       }
     }
 
-    const newId = `usr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newId = generateSecureId('usr');
     const now = new Date().toISOString();
 
     const newUser = {
@@ -243,7 +244,7 @@ export class UsersService {
     details: Record<string, unknown>,
   ) {
     this.db.memoryStore.auditLogs.push({
-      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: generateSecureId('audit'),
       ulb_id: null,
       actor_id: actor.id,
       actor_email: actor.email,

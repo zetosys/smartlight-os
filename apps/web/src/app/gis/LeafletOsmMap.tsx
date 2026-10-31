@@ -55,6 +55,16 @@ const TILE_LAYERS: Record<
   },
 };
 
+const escapeHtml = (val: unknown): string => {
+  if (val === null || val === undefined) return '';
+  return String(val)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
 const getFeaturePoint = (feature: GisFeature): [number, number] => {
   const geom = feature.geometry;
   if (geom.type === 'Point') {
@@ -124,7 +134,7 @@ export default function LeafletOsmMap({
       L.control.zoom({ position: 'topleft' }).addTo(map);
 
       // Add Tile Layer
-      const cfg = TILE_LAYERS[activeTileKey];
+      const cfg = activeTileKey === 'satellite' ? TILE_LAYERS.satellite : TILE_LAYERS.osm_standard;
       const tileLayer = L.tileLayer(cfg.url, {
         attribution: cfg.attribution,
         maxZoom: cfg.maxZoom,
@@ -166,7 +176,7 @@ export default function LeafletOsmMap({
       mapRef.current.removeLayer(tileLayerRef.current);
     }
 
-    const cfg = TILE_LAYERS[key];
+    const cfg = key === 'satellite' ? TILE_LAYERS.satellite : TILE_LAYERS.osm_standard;
     const newTile = L.tileLayer(cfg.url, {
       attribution: cfg.attribution,
       maxZoom: cfg.maxZoom,
@@ -490,14 +500,25 @@ export default function LeafletOsmMap({
       // Interactive Popup with Real-Time Telemetry and Direct Switching
       const popupDiv = document.createElement('div');
       popupDiv.className = 'p-3 text-xs font-sans space-y-2.5 min-w-[260px]';
+      const safeCode = escapeHtml(pole.properties.externalCode || pole.id);
+      const safeId = escapeHtml(pole.id?.slice(0, 16));
+      const safePhaseColor = escapeHtml(phaseColor);
+      const safePhase = escapeHtml(phase);
+      const safeWattage = escapeHtml(wattage);
+      const safeVoltage = escapeHtml(pole.properties.voltage || 228.4);
+      const safeCurrent = escapeHtml(pole.properties.currentAmps || 0.31);
+      const safeFeeder = escapeHtml(pole.properties.feederPanelCode || 'FP-01');
+      const safeGateway = escapeHtml(pole.properties.gatewayExternalCode || 'GW-01');
+      const safePoleId = escapeHtml(pole.id);
+
       popupDiv.innerHTML = `
         <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
           <div>
             <div class="font-bold text-white font-mono text-xs flex items-center gap-1.5">
-              <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${phaseColor}"></span>
-              ${pole.properties.externalCode || pole.id}
+              <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${safePhaseColor}"></span>
+              ${safeCode}
             </div>
-            <div class="text-[10px] text-slate-400 font-mono">Asset ID: ${pole.id?.slice(0, 16)}...</div>
+            <div class="text-[10px] text-slate-400 font-mono">Asset ID: ${safeId}...</div>
           </div>
           <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
             isReportedOn
@@ -513,35 +534,35 @@ export default function LeafletOsmMap({
         <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
           <div class="p-1.5 bg-slate-950/80 rounded border border-slate-800">
             <span class="text-slate-400 block text-[9px]">Phase Line</span>
-            <strong style="color: ${phaseColor}">Phase ${phase} (415V)</strong>
+            <strong style="color: ${safePhaseColor}">Phase ${safePhase} (415V)</strong>
           </div>
           <div class="p-1.5 bg-slate-950/80 rounded border border-slate-800">
             <span class="text-slate-400 block text-[9px]">Luminaire</span>
-            <strong class="text-amber-300">${wattage}W LED</strong>
+            <strong class="text-amber-300">${safeWattage}W LED</strong>
           </div>
           <div class="p-1.5 bg-slate-950/80 rounded border border-slate-800">
             <span class="text-slate-400 block text-[9px]">RMS Voltage</span>
-            <strong class="text-white">${pole.properties.voltage || 228.4} V</strong>
+            <strong class="text-white">${safeVoltage} V</strong>
           </div>
           <div class="p-1.5 bg-slate-950/80 rounded border border-slate-800">
             <span class="text-slate-400 block text-[9px]">Current / PF</span>
-            <strong class="text-emerald-400">${pole.properties.currentAmps || 0.31}A / 0.98</strong>
+            <strong class="text-emerald-400">${safeCurrent}A / 0.98</strong>
           </div>
         </div>
 
         <div class="text-[10px] text-slate-400 font-mono space-y-0.5 border-t border-slate-800 pt-1.5">
           <div class="flex justify-between">
             <span>Feeder Panel:</span>
-            <span class="text-emerald-400 font-bold">${pole.properties.feederPanelCode || 'FP-01'}</span>
+            <span class="text-emerald-400 font-bold">${safeFeeder}</span>
           </div>
           <div class="flex justify-between">
             <span>LoRa Gateway:</span>
-            <span class="text-purple-300 font-bold">${pole.properties.gatewayExternalCode || 'GW-01'}</span>
+            <span class="text-purple-300 font-bold">${safeGateway}</span>
           </div>
         </div>
 
         <div class="pt-2 border-t border-slate-800 flex items-center gap-2">
-          <button id="btn-toggle-${pole.id}" class="flex-1 py-1.5 rounded text-[11px] font-bold flex items-center justify-center gap-1.5 transition ${
+          <button id="btn-toggle-${safePoleId}" class="flex-1 py-1.5 rounded text-[11px] font-bold flex items-center justify-center gap-1.5 transition ${
             isReportedOn
               ? 'bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800/80'
               : 'bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/80'
@@ -549,7 +570,7 @@ export default function LeafletOsmMap({
             <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
             <span>${isReportedOn ? 'Switch OFF' : 'Switch ON'}</span>
           </button>
-          <button id="btn-inspect-${pole.id}" class="px-2.5 py-1.5 rounded text-[11px] font-mono bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 transition" title="Inspect telemetry & details in side panel">
+          <button id="btn-inspect-${safePoleId}" class="px-2.5 py-1.5 rounded text-[11px] font-mono bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 transition" title="Inspect telemetry & details in side panel">
             Inspect
           </button>
         </div>

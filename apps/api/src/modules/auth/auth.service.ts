@@ -16,6 +16,7 @@ import {
   ROLE_PERMISSIONS_MAP,
 } from '@smartlight/shared-types';
 import { DatabaseService } from '../../database/database.service';
+import { generateSecureId } from '../../common/crypto-id.util';
 
 @Injectable()
 export class AuthService {
@@ -150,7 +151,9 @@ export class AuthService {
 
   public buildAuthContext(userRecord: any): AuthContextUser {
     const roleCode = userRecord.role_code as UserRole;
-    const permissions = ROLE_PERMISSIONS_MAP[roleCode] || [];
+    const permissions = Object.prototype.hasOwnProperty.call(ROLE_PERMISSIONS_MAP, roleCode)
+      ? ROLE_PERMISSIONS_MAP[roleCode]
+      : [];
     const isGlobalAdmin = roleCode === 'PLATFORM_ADMIN';
     const allowedUlbIds = isGlobalAdmin || roleCode === 'AUDITOR'
       ? ['*']
@@ -207,7 +210,7 @@ export class AuthService {
     details: Record<string, unknown>,
   ) {
     this.db.memoryStore.auditLogs.push({
-      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: generateSecureId('audit'),
       ulb_id: null,
       actor_id: actorId,
       actor_email: actorId ? this.db.memoryStore.users.find((u) => u.id === actorId)?.email : null,

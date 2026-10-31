@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
+import { generateSecureId } from '../../common/crypto-id.util';
 import { AdapterRegistry, DeviceCommand as AdapterDeviceCommand } from '@smartlight/device-contracts';
 import {
   CommandStatus,
@@ -72,7 +73,7 @@ export class CommandsService {
     }
 
     // 4. Create and QUEUE the command
-    const commandId = `cmd-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const commandId = generateSecureId('cmd');
     const now = new Date().toISOString();
 
     const commandRecord = {
@@ -162,7 +163,7 @@ export class CommandsService {
       );
     }
 
-    const batchId = `batch-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const batchId = generateSecureId('batch');
     const now = new Date().toISOString();
 
     let confirmedCount = 0;
@@ -178,7 +179,7 @@ export class CommandsService {
       }
 
       // 2. Dispatch to simulator/hardware adapter
-      const singleCmdId = `cmd-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+      const singleCmdId = generateSecureId('cmd');
       const singleRecord = {
         id: singleCmdId,
         ulb_id: dev.ulb_id,
@@ -371,11 +372,12 @@ export class CommandsService {
         transportReference: dispatch.transportReference,
         error: dispatch.error,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       commandRecord.status = 'FAILED';
       commandRecord.updated_at = new Date().toISOString();
+      const errorMsg = err instanceof Error ? err.message : String(err);
       this.recordAudit(user, commandRecord.ulb_id, 'COMMAND_FAILED', commandRecord.id, {
-        error: err.message,
+        error: errorMsg,
       });
     }
   }
@@ -438,7 +440,7 @@ export class CommandsService {
   public createSchedule(dto: CreateScheduleDto, user: AuthContextUser): Schedule {
     this.assertUlbAccess(user, dto.ulbId);
 
-    const newId = `sched-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newId = generateSecureId('sched');
     const now = new Date().toISOString();
 
     const schedule = {
@@ -624,7 +626,7 @@ export class CommandsService {
     details: Record<string, unknown>,
   ) {
     this.db.memoryStore.auditLogs.push({
-      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: generateSecureId('audit'),
       ulb_id: ulbId,
       actor_id: user?.id,
       actor_email: user?.email,

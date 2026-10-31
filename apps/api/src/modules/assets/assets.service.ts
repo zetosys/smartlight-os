@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
+import { generateSecureId } from '../../common/crypto-id.util';
 import {
   CreateZoneDto,
   CreateWardDto,
@@ -443,7 +444,7 @@ export class AssetsService {
 
   public createZone(dto: CreateZoneDto, user: AuthContextUser) {
     this.assertUlbAccess(user, dto.ulbId);
-    const newId = `zone-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newId = generateSecureId('zone');
     const zone = {
       id: newId,
       ulb_id: dto.ulbId,
@@ -461,7 +462,7 @@ export class AssetsService {
     if (!zone) throw new NotFoundException('Zone not found');
     this.assertUlbAccess(user, zone.ulb_id);
 
-    const newId = `ward-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newId = generateSecureId('ward');
     const ward = {
       id: newId,
       zone_id: dto.zoneId,
@@ -480,7 +481,7 @@ export class AssetsService {
     const zone = this.db.memoryStore.zones.find((z) => z.id === ward.zone_id);
     this.assertUlbAccess(user, zone?.ulb_id || '');
 
-    const newId = `street-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newId = generateSecureId('street');
     const street = {
       id: newId,
       ward_id: dto.wardId,
@@ -503,7 +504,7 @@ export class AssetsService {
       throw new ConflictException(`Feeder panel with code '${dto.panelCode}' already exists in this ULB`);
     }
 
-    const newId = `fdr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newId = generateSecureId('fdr');
     const feeder = {
       id: newId,
       ulb_id: dto.ulbId,
@@ -531,7 +532,7 @@ export class AssetsService {
       throw new ConflictException(`Pole with code '${dto.externalCode}' already exists in this ULB`);
     }
 
-    const newId = `pole-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newId = generateSecureId('pole');
     const pole = {
       id: newId,
       ulb_id: dto.ulbId,
@@ -545,7 +546,7 @@ export class AssetsService {
     this.db.memoryStore.poles.push(pole);
 
     // Create attached luminaire if wattage supplied
-    const lumId = `lum-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const lumId = generateSecureId('lum');
     const luminaire = {
       id: lumId,
       ulb_id: dto.ulbId,
@@ -558,7 +559,7 @@ export class AssetsService {
     this.db.memoryStore.luminaires.push(luminaire);
 
     // Provision device
-    const devId = `dev-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const devId = generateSecureId('dev');
     const device = {
       id: devId,
       ulb_id: dto.ulbId,
@@ -741,7 +742,7 @@ export class AssetsService {
     details: Record<string, unknown>,
   ) {
     this.db.memoryStore.auditLogs.push({
-      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: generateSecureId('audit'),
       ulb_id: ulbId,
       actor_id: actor.id,
       actor_email: actor.email,

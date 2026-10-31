@@ -1,5 +1,6 @@
 # SmartLight OS — Hardware-Agnostic Street Light Management and Control System (SLMCS)
 
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/e5dacba3f08441249352427d899ad24b)](https://app.codacy.com/gh/zetosys/smartlight-os/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2_App_Router-black.svg)](https://nextjs.org/)
 [![NestJS](https://img.shields.io/badge/NestJS-10.3-red.svg)](https://nestjs.com/)

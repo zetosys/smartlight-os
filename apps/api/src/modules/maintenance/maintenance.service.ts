@@ -6,6 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
+import { generateSecureId } from '../../common/crypto-id.util';
 import {
   Alert,
   AlertStatus,
@@ -131,7 +132,7 @@ export class MaintenanceService {
       (u) => u.role_code === 'TECHNICIAN' && (u.ulb_id === alert.ulb_id || !u.ulb_id),
     );
 
-    const ticketId = `ticket-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const ticketId = generateSecureId('ticket');
     const now = new Date().toISOString();
 
     const newTicket = {
@@ -244,7 +245,7 @@ export class MaintenanceService {
   public createTicket(dto: CreateTicketDto, user: AuthContextUser): MaintenanceTicket {
     this.assertUlbAccess(user, dto.ulbId);
 
-    const ticketId = `ticket-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const ticketId = generateSecureId('ticket');
     const now = new Date().toISOString();
 
     const tech = dto.assignedTo
@@ -450,7 +451,7 @@ export class MaintenanceService {
     details: Record<string, unknown>,
   ) {
     this.db.memoryStore.auditLogs.push({
-      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: generateSecureId('audit'),
       ulb_id: ulbId,
       actor_id: user?.id,
       actor_email: user?.email,
