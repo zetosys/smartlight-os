@@ -20,10 +20,22 @@ import {
 } from 'lucide-react';
 import { Alert, AlertSeverity, AlertStatus } from '@smartlight/shared-types';
 
+interface AlertDisplayItem {
+  id: string;
+  code: string;
+  message: string;
+  severity: string;
+  status: string;
+  opened_at: string;
+  openedAt?: string;
+  deviceCode?: string;
+  device_id?: string;
+}
+
 export default function AlertsPage() {
   const { selectedUlb, currentUser } = useUlb();
 
-  const [alerts, setAlerts] = useState<any[]>([]);
+  const [alerts, setAlerts] = useState<AlertDisplayItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [severityFilter, setSeverityFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -31,15 +43,15 @@ export default function AlertsPage() {
   const [notification, setNotification] = useState<string | null>(null);
 
   // Ticket creation modal from alert
-  const [selectedAlertForTicket, setSelectedAlertForTicket] = useState<any | null>(null);
+  const [selectedAlertForTicket, setSelectedAlertForTicket] = useState<AlertDisplayItem | null>(null);
   const [ticketSubmitting, setTicketSubmitting] = useState<boolean>(false);
 
   const fetchAlerts = async () => {
     if (!selectedUlb) return;
     setLoading(true);
     try {
-      const data = await ApiClient.fetch<any[]>(`alerts?ulbId=${selectedUlb.id}`);
-      setAlerts(data || []);
+      const data = await ApiClient.fetch<AlertDisplayItem[]>(`alerts?ulbId=${selectedUlb.id}`);
+      setAlerts(data);
     } catch {
       // Fallback
       setAlerts([
@@ -50,7 +62,7 @@ export default function AlertsPage() {
           severity: 'MAJOR',
           status: 'OPEN',
           opened_at: new Date(Date.now() - 3600000).toISOString(),
-          deviceCode: `${selectedUlb?.code}-0003`,
+          deviceCode: `${selectedUlb ? selectedUlb.code : 'ULB'}-0003`,
         },
         {
           id: 'c0000000-0000-0000-0000-000000000002',
@@ -59,7 +71,7 @@ export default function AlertsPage() {
           severity: 'CRITICAL',
           status: 'OPEN',
           opened_at: new Date(Date.now() - 1800000).toISOString(),
-          deviceCode: `${selectedUlb?.code}-0012`,
+          deviceCode: `${selectedUlb ? selectedUlb.code : 'ULB'}-0012`,
         },
       ]);
     } finally {
@@ -68,7 +80,7 @@ export default function AlertsPage() {
   };
 
   useEffect(() => {
-    fetchAlerts();
+    void fetchAlerts();
   }, [selectedUlb]);
 
   const handleAcknowledge = async (id: string) => {
@@ -78,9 +90,10 @@ export default function AlertsPage() {
         prev.map((a) => (a.id === id ? { ...a, status: 'ACKNOWLEDGED' } : a)),
       );
       setNotification(`Alert acknowledged successfully.`);
-      setTimeout(() => setNotification(null), 3000);
-    } catch (err: any) {
-      setNotification(`Action failed: ${err.message}`);
+      setTimeout(() => { setNotification(null); }, 3000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setNotification(`Action failed: ${msg}`);
     }
   };
 
@@ -90,7 +103,7 @@ export default function AlertsPage() {
 
     setTicketSubmitting(true);
     try {
-      const ticket = await ApiClient.fetch<any>(`alerts/${selectedAlertForTicket.id}/ticket`, {
+      const ticket = await ApiClient.fetch<{ title: string }>(`alerts/${selectedAlertForTicket.id}/ticket`, {
         method: 'POST',
       });
 
@@ -101,9 +114,10 @@ export default function AlertsPage() {
 
       setNotification(`Work Order '${ticket.title}' created and dispatched to maintenance crew!`);
       setSelectedAlertForTicket(null);
-      setTimeout(() => setNotification(null), 4000);
-    } catch (err: any) {
-      setNotification(`Failed to create ticket: ${err.message}`);
+      setTimeout(() => { setNotification(null); }, 4000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setNotification(`Failed to create ticket: ${msg}`);
     } finally {
       setTicketSubmitting(false);
     }
@@ -147,7 +161,7 @@ export default function AlertsPage() {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={fetchAlerts}
+            onClick={() => { void fetchAlerts(); }}
             disabled={loading}
             className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition"
             title="Refresh"
@@ -254,7 +268,7 @@ export default function AlertsPage() {
               type="text"
               placeholder="Search code, device, message..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => { setSearchQuery(e.target.value); }}
               className="w-full pl-9 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-amber-500 text-xs"
             />
           </div>
@@ -278,7 +292,7 @@ export default function AlertsPage() {
             <span className="text-slate-500 font-sans text-[11px]">Status:</span>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => { setStatusFilter(e.target.value); }}
               className="bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-slate-300 focus:outline-none focus:border-amber-500"
             >
               <option value="ALL">All Statuses</option>
@@ -292,7 +306,7 @@ export default function AlertsPage() {
             <span className="text-slate-500 font-sans text-[11px]">Severity:</span>
             <select
               value={severityFilter}
-              onChange={(e) => setSeverityFilter(e.target.value)}
+              onChange={(e) => { setSeverityFilter(e.target.value); }}
               className="bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-slate-300 focus:outline-none focus:border-amber-500"
             >
               <option value="ALL">All Severities</option>
@@ -366,7 +380,7 @@ export default function AlertsPage() {
                       <span>•</span>
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3 text-slate-500" />
-                        Opened: {new Date(a.opened_at || a.openedAt).toLocaleString()}
+                        Opened: {new Date(a.opened_at || a.openedAt || Date.now()).toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -375,7 +389,7 @@ export default function AlertsPage() {
                   <div className="flex items-center gap-2 shrink-0 font-sans">
                     {a.status === 'OPEN' && (
                       <button
-                        onClick={() => handleAcknowledge(a.id)}
+                        onClick={() => { void handleAcknowledge(a.id); }}
                         className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 text-xs flex items-center gap-1.5 transition"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -385,7 +399,7 @@ export default function AlertsPage() {
 
                     {a.status !== 'RESOLVED' && (
                       <button
-                        onClick={() => setSelectedAlertForTicket(a)}
+                        onClick={() => { setSelectedAlertForTicket(a); }}
                         className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs flex items-center gap-1.5 transition shadow-sm"
                       >
                         <Wrench className="w-3.5 h-3.5" />
@@ -410,7 +424,7 @@ export default function AlertsPage() {
                 Dispatch Maintenance Work Order
               </h3>
               <button
-                onClick={() => setSelectedAlertForTicket(null)}
+                onClick={() => { setSelectedAlertForTicket(null); }}
                 className="text-slate-400 hover:text-white text-sm"
               >
                 ✕
@@ -431,7 +445,7 @@ export default function AlertsPage() {
               </div>
             </div>
 
-            <form onSubmit={handleCreateTicket} className="space-y-4 text-xs font-sans">
+            <form onSubmit={(e) => { void handleCreateTicket(e); }} className="space-y-4 text-xs font-sans">
               <p className="text-xs text-slate-400">
                 This will automatically generate a field maintenance work order, assign the duty technician for{' '}
                 <strong className="text-white">{selectedUlb?.name}</strong>, and transition this alarm into{' '}
@@ -441,7 +455,7 @@ export default function AlertsPage() {
               <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setSelectedAlertForTicket(null)}
+                  onClick={() => { setSelectedAlertForTicket(null); }}
                   className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs transition"
                 >
                   Cancel

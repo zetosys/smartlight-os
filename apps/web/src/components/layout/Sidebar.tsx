@@ -56,7 +56,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
   const pathname = usePathname();
   const { currentUser } = useUlb();
-  const isReportsViewer = currentUser?.role === 'REPORTS_VIEWER';
+  const isReportsViewer = currentUser.role === 'REPORTS_VIEWER';
   const MUTATING_ROUTES = ['/controls', '/scheduling', '/simulator', '/users', '/maintenance', '/settings'];
 
   // Only close sidebar on link click if on mobile screens (< 768px)
@@ -66,8 +66,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
       alert("🔒 Access Restricted: The REPORTS_VIEWER role has strictly read-only reporting access. Operational controls and mutations are blocked under RBAC policy.");
       return;
     }
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      onClose?.();
+    if (typeof window !== 'undefined' && window.innerWidth < 768 && onClose) {
+      onClose();
     }
   };
 
@@ -76,7 +76,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
       {/* Mobile Drawer Backdrop */}
       {isOpen && (
         <div
-          onClick={onClose}
+          onClick={() => {
+            if (onClose) onClose();
+          }}
           className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 md:hidden animate-in fade-in duration-200"
           aria-hidden="true"
         />
@@ -104,7 +106,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
             </div>
             {onClose && (
               <button
-                onClick={onClose}
+                onClick={() => {
+                  onClose();
+                }}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
                 aria-label="Close navigation menu"
               >
@@ -151,7 +155,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={(e) => handleLinkClick(e, item.href)}
+                onClick={(e) => {
+                  handleLinkClick(e, item.href);
+                }}
                 className={`flex items-center ${
                   isOpen ? 'justify-between px-3 py-2.5' : 'justify-center p-2.5'
                 } rounded-lg text-xs font-medium transition-all group relative ${

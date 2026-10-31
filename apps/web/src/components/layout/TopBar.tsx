@@ -52,7 +52,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen =
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   // Live IST Clock
@@ -72,7 +74,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen =
     };
     updateTime();
     const timer = setInterval(updateTime, 1000);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+    };
   }, []);
 
   const getInitials = (name: string) => {
@@ -138,7 +142,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen =
         {/* Municipal Scope Selector Dropdown */}
         <div className="relative" ref={ulbMenuRef}>
           <button
-            onClick={() => setIsUlbMenuOpen(!isUlbMenuOpen)}
+            onClick={() => {
+              setIsUlbMenuOpen(!isUlbMenuOpen);
+            }}
             className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 text-xs text-slate-200 transition shadow-sm focus:outline-none focus:ring-1 focus:ring-amber-500"
             title="Switch Municipal ULB Scope"
           >
@@ -253,7 +259,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen =
         {/* User Profile & Role Switcher Popover */}
         <div className="relative" ref={userMenuRef}>
           <button
-            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+            onClick={() => {
+              setIsUserMenuOpen(!isUserMenuOpen);
+            }}
             className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 text-xs transition focus:outline-none focus:ring-1 focus:ring-amber-500"
             title="User Profile & Quick Account Switcher"
           >
@@ -337,7 +345,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen =
               <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs gap-2">
                 <Link
                   href="/portal"
-                  onClick={() => setIsUserMenuOpen(false)}
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                  }}
                   className="flex items-center gap-1 px-2 py-1.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-mono text-[11px] font-semibold transition"
                   title="Open dedicated operational portal for current role"
                 >
@@ -347,7 +357,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen =
 
                 <Link
                   href="/login"
-                  onClick={() => setIsUserMenuOpen(false)}
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                  }}
                   className="flex items-center gap-1 px-2 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-[11px] transition"
                 >
                   <KeyRound className="w-3.5 h-3.5" />
@@ -356,7 +368,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen =
 
                 <Link
                   href="/settings"
-                  onClick={() => setIsUserMenuOpen(false)}
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                  }}
                   className="flex items-center gap-1 px-2 py-1.5 rounded hover:bg-slate-800 text-slate-400 font-mono text-[11px] transition"
                 >
                   <Settings className="w-3.5 h-3.5" />

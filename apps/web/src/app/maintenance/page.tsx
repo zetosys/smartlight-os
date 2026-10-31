@@ -71,7 +71,7 @@ export default function MaintenancePage() {
 
   useEffect(() => {
     if (!selectedUlb) return;
-    loadData();
+    void loadData();
   }, [selectedUlb]);
 
   const loadData = async () => {
@@ -80,18 +80,18 @@ export default function MaintenancePage() {
     try {
       // 1. Fetch tickets
       const data = await ApiClient.fetch<MaintenanceTicket[]>(`tickets?ulbId=${selectedUlb.id}`);
-      setTickets(data || []);
+      setTickets(data);
 
       // 2. Fetch spare parts
       const parts = await ApiClient.fetch<SparePart[]>('maintenance/spare-parts');
-      if (parts && parts.length > 0) {
+      if (Array.isArray(parts) && parts.length > 0) {
         setSpareParts(parts);
         setSelectedPartId(parts[0].id);
       }
 
       // 3. Fetch site engineers / technicians for this ULB
       const techs = await ApiClient.fetch<SiteEngineer[]>(`maintenance/technicians?ulbId=${selectedUlb.id}`);
-      if (techs && techs.length > 0) {
+      if (Array.isArray(techs) && techs.length > 0) {
         setTechnicians(techs);
         setSelectedTechId(techs[0].id);
       } else {
@@ -179,9 +179,10 @@ export default function MaintenancePage() {
       setNewTitle('');
       setNewDesc('');
       setNotification(`Work order '${created.title}' created successfully.`);
-      setTimeout(() => setNotification(null), 3000);
-    } catch (err: any) {
-      setNotification(`Failed to create ticket: ${err.message}`);
+      setTimeout(() => { setNotification(null); }, 3000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setNotification(`Failed to create ticket: ${msg}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -214,9 +215,10 @@ export default function MaintenancePage() {
       setNotification(`Work order '${assigningTicket.title}' assigned to ${techObj?.name || 'Site Engineer'}. Field repair dispatched!`);
       setAssignModalOpen(false);
       setAssigningTicket(null);
-      setTimeout(() => setNotification(null), 4000);
-    } catch (err: any) {
-      setNotification(`Failed to assign work order: ${err.message}`);
+      setTimeout(() => { setNotification(null); }, 4000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setNotification(`Failed to assign work order: ${msg}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -317,14 +319,14 @@ export default function MaintenancePage() {
 
         <div className="flex items-center gap-2.5">
           <button
-            onClick={() => setPartsDrawerOpen(true)}
+            onClick={() => { setPartsDrawerOpen(true); }}
             className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-mono flex items-center gap-1.5 transition"
           >
             <Boxes className="w-3.5 h-3.5 text-amber-400" />
             Spare Parts Catalog
           </button>
           <button
-            onClick={() => setCreateModalOpen(true)}
+            onClick={() => { setCreateModalOpen(true); }}
             className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -403,7 +405,7 @@ export default function MaintenancePage() {
                             <span className="text-amber-400 font-bold">{t.deviceCode || t.deviceId || 'ULB'}</span>
                             {t.status !== 'RESOLVED' && (
                               <button
-                                onClick={() => openAssignModal(t)}
+                                onClick={() => { openAssignModal(t); }}
                                 className="px-2 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[10px] font-mono flex items-center gap-1 transition"
                                 title="Assign or reassign site engineer"
                               >
@@ -426,7 +428,7 @@ export default function MaintenancePage() {
                         <div className="pt-2 border-t border-slate-800/60 flex items-center gap-2">
                           {t.status === 'OPEN' && !t.assignedTo && (
                             <button
-                              onClick={() => openAssignModal(t)}
+                              onClick={() => { openAssignModal(t); }}
                               className="w-full py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded text-[11px] font-bold flex items-center justify-center gap-1.5 transition"
                             >
                               <UserCheck className="w-3.5 h-3.5" />
@@ -436,7 +438,7 @@ export default function MaintenancePage() {
 
                           {t.status === 'OPEN' && t.assignedTo && (
                             <button
-                              onClick={() => handleAdvanceStatus(t, 'IN_PROGRESS')}
+                              onClick={() => { void handleAdvanceStatus(t, 'IN_PROGRESS'); }}
                               className="w-full py-1.5 bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/40 rounded text-[11px] font-bold flex items-center justify-center gap-1.5 transition"
                             >
                               <span>Start Repair</span>
@@ -446,7 +448,7 @@ export default function MaintenancePage() {
 
                           {t.status === 'IN_PROGRESS' && (
                             <button
-                              onClick={() => handleAdvanceStatus(t, 'RESOLVED')}
+                              onClick={() => { void handleAdvanceStatus(t, 'RESOLVED'); }}
                               className="w-full py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 rounded text-[11px] font-bold flex items-center justify-center gap-1.5 transition"
                             >
                               <CheckCircle2 className="w-3 h-3" />
@@ -479,17 +481,17 @@ export default function MaintenancePage() {
                 <Wrench className="w-4 h-4 text-amber-400" />
                 Create Field Maintenance Work Order
               </h3>
-              <button onClick={() => setCreateModalOpen(false)} className="text-slate-400 hover:text-white">✕</button>
+              <button onClick={() => { setCreateModalOpen(false); }} className="text-slate-400 hover:text-white">✕</button>
             </div>
 
-            <form onSubmit={handleCreateTicket} className="space-y-4 text-xs font-sans">
+            <form onSubmit={(e) => { void handleCreateTicket(e); }} className="space-y-4 text-xs font-sans">
               <div>
                 <label className="text-slate-400 block mb-1">Work Order Title</label>
                 <input
                   type="text"
                   required
                   value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
+                  onChange={(e) => { setNewTitle(e.target.value); }}
                   placeholder="e.g. Replace damaged surge protector at Pole #P-GBL-014"
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white text-xs focus:outline-none focus:border-amber-500"
                 />
@@ -500,7 +502,7 @@ export default function MaintenancePage() {
                   <label className="text-slate-400 block mb-1 font-sans">Priority</label>
                   <select
                     value={newPriority}
-                    onChange={(e: any) => setNewPriority(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setNewPriority(e.target.value as TicketPriority); }}
                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white text-xs focus:outline-none focus:border-amber-500"
                   >
                     <option value="CRITICAL">CRITICAL (Grid/Hazard)</option>
@@ -515,7 +517,7 @@ export default function MaintenancePage() {
                   <input
                     type="text"
                     value={newDeviceId}
-                    onChange={(e) => setNewDeviceId(e.target.value)}
+                    onChange={(e) => { setNewDeviceId(e.target.value); }}
                     placeholder="e.g. SIM-GBL-0001"
                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white text-xs focus:outline-none focus:border-amber-500"
                   />
@@ -526,7 +528,7 @@ export default function MaintenancePage() {
                 <label className="text-slate-400 block mb-1 font-sans">Assign Site Engineer (Field Technician)</label>
                 <select
                   value={newAssignedTo}
-                  onChange={(e) => setNewAssignedTo(e.target.value)}
+                  onChange={(e) => { setNewAssignedTo(e.target.value); }}
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white text-xs focus:outline-none focus:border-amber-500 font-mono"
                 >
                   <option value="">Unassigned (Queue in Dispatch)</option>
@@ -543,7 +545,7 @@ export default function MaintenancePage() {
                 <textarea
                   rows={3}
                   value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
+                  onChange={(e) => { setNewDesc(e.target.value); }}
                   placeholder="Describe electrical measurements, required tooling, and access coordinates..."
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white text-xs focus:outline-none focus:border-amber-500"
                 />
@@ -552,7 +554,7 @@ export default function MaintenancePage() {
               <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setCreateModalOpen(false)}
+                  onClick={() => { setCreateModalOpen(false); }}
                   className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs transition"
                 >
                   Cancel
@@ -579,7 +581,7 @@ export default function MaintenancePage() {
                 <UserCheck className="w-4 h-4 text-amber-400" />
                 Assign Work Order to Site Engineer
               </h3>
-              <button onClick={() => setAssignModalOpen(false)} className="text-slate-400 hover:text-white">✕</button>
+              <button onClick={() => { setAssignModalOpen(false); }} className="text-slate-400 hover:text-white">✕</button>
             </div>
 
             {/* Ticket overview info */}
@@ -601,7 +603,7 @@ export default function MaintenancePage() {
               )}
             </div>
 
-            <form onSubmit={handleAssignTicket} className="space-y-4 text-xs font-sans">
+            <form onSubmit={(e) => { void handleAssignTicket(e); }} className="space-y-4 text-xs font-sans">
               <div>
                 <label className="text-slate-300 block mb-1 font-semibold flex items-center justify-between">
                   <span>Select Qualified Site Engineer</span>
@@ -609,7 +611,7 @@ export default function MaintenancePage() {
                 </label>
                 <select
                   value={selectedTechId}
-                  onChange={(e) => setSelectedTechId(e.target.value)}
+                  onChange={(e) => { setSelectedTechId(e.target.value); }}
                   required
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white text-xs focus:outline-none focus:border-amber-500 font-mono"
                 >
@@ -640,7 +642,7 @@ export default function MaintenancePage() {
               <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setAssignModalOpen(false)}
+                  onClick={() => { setAssignModalOpen(false); }}
                   className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs transition"
                 >
                   Cancel
@@ -668,7 +670,7 @@ export default function MaintenancePage() {
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 Sign-Off &amp; Complete Work Order
               </h3>
-              <button onClick={() => setResolvingTicket(null)} className="text-slate-400 hover:text-white">✕</button>
+              <button onClick={() => { setResolvingTicket(null); }} className="text-slate-400 hover:text-white">✕</button>
             </div>
 
             <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-lg text-xs space-y-1 font-mono">
@@ -676,14 +678,14 @@ export default function MaintenancePage() {
               <div className="text-slate-400">Asset: <span className="text-amber-400">{resolvingTicket.deviceCode || resolvingTicket.deviceId}</span></div>
             </div>
 
-            <form onSubmit={handleCompleteResolution} className="space-y-4 text-xs font-sans">
+            <form onSubmit={(e) => { void handleCompleteResolution(e); }} className="space-y-4 text-xs font-sans">
               <div>
                 <label className="text-slate-400 block mb-1">Technician Resolution Report</label>
                 <textarea
                   rows={2}
                   required
                   value={resolutionNotes}
-                  onChange={(e) => setResolutionNotes(e.target.value)}
+                  onChange={(e) => { setResolutionNotes(e.target.value); }}
                   placeholder="Report replaced components, insulation resistance test, and line voltage verified..."
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white text-xs focus:outline-none focus:border-emerald-500"
                 />
@@ -703,7 +705,7 @@ export default function MaintenancePage() {
                   <div className="col-span-2">
                     <select
                       value={selectedPartId}
-                      onChange={(e) => setSelectedPartId(e.target.value)}
+                      onChange={(e) => { setSelectedPartId(e.target.value); }}
                       className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
                     >
                       {spareParts.map((p) => (
@@ -719,7 +721,7 @@ export default function MaintenancePage() {
                       min="1"
                       max="10"
                       value={selectedPartQty}
-                      onChange={(e) => setSelectedPartQty(parseInt(e.target.value, 10))}
+                      onChange={(e) => { setSelectedPartQty(parseInt(e.target.value, 10)); }}
                       className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs text-center"
                     />
                   </div>
@@ -729,7 +731,7 @@ export default function MaintenancePage() {
               <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setResolvingTicket(null)}
+                  onClick={() => { setResolvingTicket(null); }}
                   className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs transition"
                 >
                   Cancel
@@ -757,7 +759,7 @@ export default function MaintenancePage() {
                 <Boxes className="w-4 h-4 text-amber-400" />
                 Municipal Warehouse Spare Parts Catalog
               </h3>
-              <button onClick={() => setPartsDrawerOpen(false)} className="text-slate-400 hover:text-white">✕</button>
+              <button onClick={() => { setPartsDrawerOpen(false); }} className="text-slate-400 hover:text-white">✕</button>
             </div>
 
             <div className="overflow-x-auto max-h-96">
@@ -791,7 +793,7 @@ export default function MaintenancePage() {
 
             <div className="flex justify-end pt-2 border-t border-slate-800">
               <button
-                onClick={() => setPartsDrawerOpen(false)}
+                onClick={() => { setPartsDrawerOpen(false); }}
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs transition"
               >
                 Close

@@ -248,7 +248,9 @@ export default function LeafletOsmMap({
             { sticky: true, opacity: 0.95 },
           );
 
-          polygon.on('click', () => onSelectFeature(z));
+          polygon.on('click', () => {
+            onSelectFeature(z);
+          });
           zonesLayerRef.current?.addLayer(polygon);
         }
       });
@@ -321,7 +323,9 @@ export default function LeafletOsmMap({
       `;
 
       marker.bindPopup(popupHtml);
-      marker.on('click', () => onSelectFeature(gw));
+      marker.on('click', () => {
+        onSelectFeature(gw);
+      });
       gatewaysLayerRef.current?.addLayer(marker);
 
       // Draw LoRa Star Topology Radio Beams to child streetlight nodes
@@ -391,7 +395,9 @@ export default function LeafletOsmMap({
       `;
 
       marker.bindPopup(popupHtml);
-      marker.on('click', () => onSelectFeature(feeder));
+      marker.on('click', () => {
+        onSelectFeature(feeder);
+      });
       feedersLayerRef.current?.addLayer(marker);
 
       // Feeder Circuit Distribution Lines to connected poles
@@ -595,7 +601,9 @@ export default function LeafletOsmMap({
         }
       });
 
-      marker.on('click', () => onSelectFeature(pole));
+      marker.on('click', () => {
+        onSelectFeature(pole);
+      });
       polesLayerRef.current?.addLayer(marker);
     });
 
@@ -640,7 +648,9 @@ export default function LeafletOsmMap({
           {(['osm_standard', 'satellite'] as const).map((key) => (
             <button
               key={key}
-              onClick={() => switchTileLayer(key)}
+              onClick={() => {
+                switchTileLayer(key);
+              }}
               className={`px-3 py-1 rounded text-[11px] font-bold transition flex items-center gap-1.5 ${
                 activeTileKey === key
                   ? 'bg-amber-500 text-slate-950 shadow-sm'
@@ -654,7 +664,9 @@ export default function LeafletOsmMap({
 
         {/* Fit / Recenter Button */}
         <button
-          onClick={fitFleetBounds}
+          onClick={() => {
+            fitFleetBounds();
+          }}
           className="px-3 py-1.5 bg-slate-900/95 hover:bg-slate-800 text-slate-200 border border-slate-700/80 rounded-lg shadow-xl text-xs font-mono font-semibold flex items-center gap-1.5 backdrop-blur transition"
           title="Fit view to all streetlight poles in fleet"
         >

@@ -67,7 +67,7 @@ export class AssetsService {
   public getFeeders(ulbId?: string) {
     let feeders = this.db.memoryStore.feeders;
     if (ulbId) {
-      feeders = feeders.filter((f) => (f.ulb_id || (f as any).ulbId) === ulbId);
+      feeders = feeders.filter((f) => (f.ulb_id || f.ulbId) === ulbId);
     }
     return feeders;
   }
@@ -75,7 +75,7 @@ export class AssetsService {
   public getGateways(ulbId?: string) {
     let gateways = this.db.memoryStore.gateways;
     if (ulbId) {
-      gateways = gateways.filter((g) => (g.ulb_id || (g as any).ulbId) === ulbId);
+      gateways = gateways.filter((g) => (g.ulb_id || g.ulbId) === ulbId);
     }
     return gateways;
   }
@@ -83,7 +83,7 @@ export class AssetsService {
   public getZones(ulbId?: string) {
     let zones = this.db.memoryStore.zones;
     if (ulbId) {
-      zones = zones.filter((z) => (z.ulb_id || (z as any).ulbId) === ulbId);
+      zones = zones.filter((z) => (z.ulb_id || z.ulbId) === ulbId);
     }
     return zones;
   }
@@ -91,81 +91,81 @@ export class AssetsService {
   public getPoles(ulbId?: string) {
     let poles = this.db.memoryStore.poles;
     if (ulbId) {
-      poles = poles.filter((p) => (p.ulb_id || (p as any).ulbId) === ulbId);
+      poles = poles.filter((p) => (p.ulb_id || p.ulbId) === ulbId);
     }
 
     return poles.map((p) => {
       const luminaire = this.db.memoryStore.luminaires.find(
-        (l) => (l.pole_id || (l as any).poleId) === p.id,
+        (l) => (l.pole_id || l.poleId) === p.id,
       );
       const feeder = luminaire
         ? this.db.memoryStore.feeders.find(
-            (f) => f.id === (luminaire.feeder_id || (luminaire as any).feederId),
+            (f) => f.id === (luminaire.feeder_id || luminaire.feederId),
           )
         : null;
       const device = luminaire
         ? this.db.memoryStore.devices.find(
-            (d) => (d.luminaire_id || (d as any).luminaireId) === luminaire.id,
+            (d) => (d.luminaire_id || d.luminaireId) === luminaire.id,
           )
         : null;
       const gateway = device
         ? this.db.memoryStore.gateways.find(
-            (g) => g.id === (device.gateway_id || (device as any).gatewayId),
+            (g) => g.id === (device.gateway_id || device.gatewayId),
           )
         : null;
-      const street = (p.street_id || (p as any).streetId)
-        ? this.db.memoryStore.streets.find((s) => s.id === (p.street_id || (p as any).streetId))
+      const street = (p.street_id || p.streetId)
+        ? this.db.memoryStore.streets.find((s) => s.id === (p.street_id || p.streetId))
         : null;
 
-      const pUlbId = p.ulb_id || (p as any).ulbId;
+      const pUlbId = p.ulb_id || p.ulbId;
       const isKtr = pUlbId === '22222222-2222-2222-2222-222222222222';
-      const lat = p.latitude || (p as any).location?.latitude || (isKtr ? 32.9925 : 34.2165);
-      const lng = p.longitude || (p as any).location?.longitude || (isKtr ? 74.9318 : 74.7725);
+      const lat = p.latitude || p.location?.latitude || (isKtr ? 32.9925 : 34.2165);
+      const lng = p.longitude || p.location?.longitude || (isKtr ? 74.9318 : 74.7725);
 
       return {
         ...p,
         ulb_id: pUlbId,
-        external_code: p.external_code || (p as any).externalCode,
-        height_meters: p.height_meters || (p as any).heightMeters || 8.5,
+        external_code: p.external_code || p.externalCode,
+        height_meters: p.height_meters || p.heightMeters || 8.5,
         location: {
           latitude: lat,
           longitude: lng,
         },
-        streetName: street?.name || (p as any).streetName || 'Main Route',
-        feederId: feeder?.id || (luminaire ? (luminaire.feeder_id || (luminaire as any).feederId) : (p as any).feederId) || null,
-        feederName: feeder?.name || (p as any).feederName || 'Feeder Panel',
-        feederPanelCode: feeder?.panel_code || (feeder as any)?.panelCode || (p as any).feederPanelCode || 'N/A',
+        streetName: street?.name || p.streetName || 'Main Route',
+        feederId: feeder?.id || (luminaire ? (luminaire.feeder_id || luminaire.feederId) : p.feederId) || null,
+        feederName: feeder?.name || p.feederName || 'Feeder Panel',
+        feederPanelCode: feeder?.panel_code || feeder?.panelCode || p.feederPanelCode || 'N/A',
         gatewayId: gateway?.id || null,
-        gatewayExternalCode: gateway?.external_code || (gateway as any)?.externalCode || null,
-        luminaireWattage: luminaire?.wattage ?? (p as any).luminaireWattage ?? 70,
-        lampType: luminaire?.lamp_type ?? (luminaire as any)?.lampType ?? 'LED',
-        phaseConnection: luminaire?.phase_connection ?? (luminaire as any)?.phaseConnection ?? 'R',
-        deviceExternalId: device?.external_id || (p as any).deviceExternalId || 'N/A',
-        isOnline: device ? ((device as any).is_online ?? (device as any).isOnline ?? true) : ((p as any).isOnline ?? true),
-        reportedOn: device ? ((device as any).reported_on ?? (device as any).reportedOn ?? false) : ((p as any).reportedOn ?? false),
-        desiredOn: device ? ((device as any).desired_on ?? (device as any).desiredOn ?? false) : ((p as any).desiredOn ?? false),
+        gatewayExternalCode: gateway?.external_code || gateway?.externalCode || null,
+        luminaireWattage: luminaire?.wattage ?? p.luminaireWattage ?? 70,
+        lampType: luminaire?.lamp_type ?? luminaire?.lampType ?? 'LED',
+        phaseConnection: luminaire?.phase_connection ?? luminaire?.phaseConnection ?? 'R',
+        deviceExternalId: device?.external_id || p.deviceExternalId || 'N/A',
+        isOnline: device ? (device.is_online ?? device.isOnline ?? true) : (p.isOnline ?? true),
+        reportedOn: device ? (device.reported_on ?? device.reportedOn ?? false) : (p.reportedOn ?? false),
+        desiredOn: device ? (device.desired_on ?? device.desiredOn ?? false) : (p.desiredOn ?? false),
       };
     });
   }
 
   public getPoleById(id: string) {
-    const p = this.db.memoryStore.poles.find((pole) => pole.id === id || (pole.external_code || (pole as any).externalCode) === id);
+    const p = this.db.memoryStore.poles.find((pole) => pole.id === id || (pole.external_code || pole.externalCode) === id);
     if (!p) {
       throw new NotFoundException(`Pole with identifier '${id}' not found`);
     }
-    const luminaire = this.db.memoryStore.luminaires.find((l) => (l.pole_id || (l as any).poleId) === p.id);
-    const feeder = luminaire ? this.db.memoryStore.feeders.find((f) => f.id === (luminaire.feeder_id || (luminaire as any).feederId)) : null;
-    const device = luminaire ? this.db.memoryStore.devices.find((d) => (d.luminaire_id || (d as any).luminaireId) === luminaire.id) : null;
+    const luminaire = this.db.memoryStore.luminaires.find((l) => (l.pole_id || l.poleId) === p.id);
+    const feeder = luminaire ? this.db.memoryStore.feeders.find((f) => f.id === (luminaire.feeder_id || luminaire.feederId)) : null;
+    const device = luminaire ? this.db.memoryStore.devices.find((d) => (d.luminaire_id || d.luminaireId) === luminaire.id) : null;
 
-    const pUlbId = p.ulb_id || (p as any).ulbId;
+    const pUlbId = p.ulb_id || p.ulbId;
     const isKtr = pUlbId === '22222222-2222-2222-2222-222222222222';
-    const lat = p.latitude || (p as any).location?.latitude || (isKtr ? 32.9925 : 34.2165);
-    const lng = p.longitude || (p as any).location?.longitude || (isKtr ? 74.9318 : 74.7725);
+    const lat = p.latitude || p.location?.latitude || (isKtr ? 32.9925 : 34.2165);
+    const lng = p.longitude || p.location?.longitude || (isKtr ? 74.9318 : 74.7725);
 
     return {
       ...p,
       ulb_id: pUlbId,
-      external_code: p.external_code || (p as any).externalCode,
+      external_code: p.external_code || p.externalCode,
       location: {
         latitude: lat,
         longitude: lng,
@@ -220,7 +220,7 @@ export class AssetsService {
               (a.status === 'OPEN' || a.status === 'ACKNOWLEDGED') &&
               (a.device_id === p.id ||
                 a.device_id === p.deviceExternalId ||
-                (p as any).device_id === a.device_id),
+                p.device_id === a.device_id),
           );
 
           let status: 'online_on' | 'online_off' | 'critical_fault' | 'major_fault' | 'warning' | 'comm_loss' = 'online_off';
@@ -286,14 +286,14 @@ export class AssetsService {
       const allPoles = this.getPoles(ulbId);
 
       for (const f of feeders) {
-        const isGbl = (f.ulb_id || (f as any).ulbId) === '11111111-1111-1111-1111-111111111111';
+        const isGbl = (f.ulb_id || f.ulbId) === '11111111-1111-1111-1111-111111111111';
         const defaultLng = isGbl ? 74.7725 : 74.9318;
         const defaultLat = isGbl ? 34.2165 : 32.9925;
-        const lng = f.location?.longitude || (f as any).longitude || defaultLng;
-        const lat = f.location?.latitude || (f as any).latitude || defaultLat;
+        const lng = f.location?.longitude || f.longitude || defaultLng;
+        const lat = f.location?.latitude || f.latitude || defaultLat;
 
         if (inBbox(lng, lat)) {
-          const pCode = f.panel_code || (f as any).panelCode;
+          const pCode = f.panel_code || f.panelCode;
           const connectedPoles = allPoles.filter(
             (p) => p.feederId === f.id || p.feederPanelCode === pCode,
           );
@@ -315,8 +315,8 @@ export class AssetsService {
               id: f.id,
               name: f.name,
               panelCode: pCode,
-              capacityKw: f.capacity_kw || (f as any).capacityKw || 30.0,
-              meterNumber: f.meter_number || (f as any).meterNumber || 'UNMETERED',
+              capacityKw: f.capacity_kw || f.capacityKw || 30.0,
+              meterNumber: f.meter_number || f.meterNumber || 'UNMETERED',
               phase: f.phase || '3-PHASE',
               connectedLuminairesCount: connectedPoles.length,
               activeLuminairesCount: activePoles.length,
@@ -334,25 +334,25 @@ export class AssetsService {
       const feeders = this.getFeeders(ulbId);
 
       for (const g of gateways) {
-        const gUlbId = g.ulb_id || (g as any).ulbId;
+        const gUlbId = g.ulb_id || g.ulbId;
         const isGbl = gUlbId === '11111111-1111-1111-1111-111111111111';
         const defaultLng = isGbl ? 74.7725 : 74.9318;
         const defaultLat = isGbl ? 34.2165 : 32.9925;
 
         const feeder = feeders.find(
-          (f) => f.id === (g.feeder_id || (g as any).feederId),
+          (f) => f.id === (g.feeder_id || g.feederId),
         );
-        const lng = (g as any).location?.longitude || feeder?.location?.longitude || defaultLng;
-        const lat = (g as any).location?.latitude || feeder?.location?.latitude || defaultLat;
+        const lng = g.location?.longitude || feeder?.location?.longitude || defaultLng;
+        const lat = g.location?.latitude || feeder?.location?.latitude || defaultLat;
 
         if (inBbox(lng, lat)) {
           const isOnline =
-            (g as any).is_online !== undefined
-              ? (g as any).is_online
-              : ((g as any).isOnline ?? true);
+            g.is_online !== undefined
+              ? g.is_online
+              : (g.isOnline ?? true);
 
           const connectedDevices = this.db.memoryStore.devices.filter(
-            (d) => (d.gateway_id || (d as any).gatewayId) === g.id,
+            (d) => (d.gateway_id || d.gatewayId) === g.id,
           );
           const connectedDevicesCount = connectedDevices.length || (isGbl ? (g.id === 'gw-gbl-61' ? 40 : 45) : (g.id === 'gw-ktr-42' ? 23 : 45));
 
@@ -367,11 +367,11 @@ export class AssetsService {
               assetType: 'GATEWAY',
               id: g.id,
               name: g.name,
-              externalCode: g.external_code || (g as any).externalCode,
-              ipAddress: g.ip_address || (g as any).ipAddress,
+              externalCode: g.external_code || g.externalCode,
+              ipAddress: g.ip_address || g.ipAddress,
               isOnline,
               status: isOnline ? 'online' : 'offline',
-              feederId: g.feeder_id || (g as any).feederId,
+              feederId: g.feeder_id || g.feederId,
               feederName: feeder?.name,
               connectedDevicesCount,
               maxDevicesCapacity: 45,
@@ -390,7 +390,7 @@ export class AssetsService {
     if (matchesLayer('zones')) {
       const zones = this.getZones(ulbId);
       for (const z of zones) {
-        const zUlbId = z.ulb_id || (z as any).ulbId;
+        const zUlbId = z.ulb_id || z.ulbId;
         const isGbl = zUlbId === '11111111-1111-1111-1111-111111111111';
         const code = z.code || '';
 

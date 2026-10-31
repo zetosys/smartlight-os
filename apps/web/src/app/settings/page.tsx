@@ -6,14 +6,24 @@ import { ApiClient } from '../../lib/api-client';
 import { SimulatedBadge } from '@smartlight/ui';
 import { Settings, Shield, ScrollText, Database, Server } from 'lucide-react';
 
+interface AuditLogItem {
+  id: string;
+  action: string;
+  actor_email?: string;
+  entity_type: string;
+  entity_id?: string;
+  occurred_at: string;
+  details?: Record<string, unknown>;
+}
+
 export default function SettingsPage() {
   const { selectedUlb } = useUlb();
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<AuditLogItem[]>([]);
 
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const data = await ApiClient.fetch<any[]>(`audit?ulbId=${selectedUlb?.id || ''}`);
+        const data = await ApiClient.fetch<AuditLogItem[]>(`audit?ulbId=${selectedUlb?.id || ''}`);
         setLogs(data || []);
       } catch {
         setLogs([
@@ -36,7 +46,7 @@ export default function SettingsPage() {
         ]);
       }
     };
-    fetchLogs();
+    void fetchLogs();
   }, [selectedUlb]);
 
   return (

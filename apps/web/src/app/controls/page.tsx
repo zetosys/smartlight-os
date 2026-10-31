@@ -31,7 +31,7 @@ interface CommandLogItem {
   device_id: string;
   status: string;
   idempotency_key: string;
-  payload?: any;
+  payload?: Record<string, unknown>;
   created_at: string;
   steps?: string[];
 }
@@ -72,8 +72,8 @@ export default function ControlsPage() {
 
     const loadFeeders = async () => {
       try {
-        const data = await ApiClient.fetch<any[]>(`assets/feeders?ulbId=${selectedUlb.id}`);
-        if (data && data.length > 0) {
+        const data = await ApiClient.fetch<FeederOption[]>(`assets/feeders?ulbId=${selectedUlb.id}`);
+        if (Array.isArray(data) && data.length > 0) {
           setFeeders(data);
           setSelectedFeederId(data[0].id);
         } else {
@@ -101,8 +101,8 @@ export default function ControlsPage() {
       }
     };
 
-    loadFeeders();
-    fetchCommands();
+    void loadFeeders();
+    void fetchCommands();
   }, [selectedUlb]);
 
   const fetchCommands = async () => {
@@ -110,7 +110,7 @@ export default function ControlsPage() {
     setIsLoadingLogs(true);
     try {
       const data = await ApiClient.fetch<CommandLogItem[]>(`commands?ulbId=${selectedUlb.id}&limit=15`);
-      if (data && Array.isArray(data)) {
+      if (Array.isArray(data)) {
         setCommandLogs(
           data.map((c) => ({
             ...c,
@@ -206,8 +206,9 @@ export default function ControlsPage() {
         };
         setCommandLogs((prev) => [newLog, ...prev.slice(0, 14)]);
       }
-    } catch (err: any) {
-      setActionError(err.message || 'Failed to dispatch command');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setActionError(msg || 'Failed to dispatch command');
     } finally {
       setIsSubmitting(false);
     }
@@ -226,23 +227,24 @@ export default function ControlsPage() {
     const idempotencyKey = `emergency-${selectedUlb?.code}-${Date.now()}`;
 
     try {
-      const res = await ApiClient.fetch<any>('commands/batch', {
+      const res = await ApiClient.fetch<{ confirmedCount?: number }>('commands/batch', {
         method: 'POST',
         body: JSON.stringify({
           ulbId: selectedUlb?.id,
           type: emergencyAction,
           targetType: 'ULB',
           idempotencyKey,
-          payload: { reason: 'EMERGENCY_MUNICIPAL_OVERRIDE', actor: currentUser?.email },
+          payload: { reason: 'EMERGENCY_MUNICIPAL_OVERRIDE', actor: currentUser ? currentUser.email : 'system' },
         }),
       });
 
       setActionSuccess(
-        `🚨 EMERGENCY OVERRIDE CONFIRMED: ${res.confirmedCount} lights switched ${emergencyAction} across ${selectedUlb?.name}`,
+        `🚨 EMERGENCY OVERRIDE CONFIRMED: ${res.confirmedCount ?? 0} lights switched ${emergencyAction} across ${selectedUlb?.name}`,
       );
-      fetchCommands();
-    } catch (err: any) {
-      setActionError(`Emergency Override Failed: ${err.message}`);
+      void fetchCommands();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setActionError(`Emergency Override Failed: ${msg}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -265,7 +267,7 @@ export default function ControlsPage() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={fetchCommands}
+            onClick={() => { void fetchCommands(); }}
             disabled={isLoadingLogs}
             className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs flex items-center gap-1.5 border border-slate-700 transition"
           >
@@ -345,7 +347,7 @@ export default function ControlsPage() {
             <span className="text-[10px] font-mono text-slate-400">Idempotent</span>
           </div>
 
-          <form onSubmit={handleDispatchCommand} className="space-y-4 text-xs">
+          <form onSubmit={(e) => { void handleDispatchCommand(e); }} className="space-y-4 text-xs">
             {/* Target Scope Selection */}
             <div>
               <label className="text-slate-400 block mb-1.5 font-medium">Target Scope</label>
@@ -354,7 +356,7 @@ export default function ControlsPage() {
                   <button
                     key={scope}
                     type="button"
-                    onClick={() => setTargetScope(scope)}
+                    onClick={() => { setTargetScope(scope); }}
                     className={`py-2 rounded font-mono font-medium border transition ${
                       targetScope === scope
                         ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
@@ -373,7 +375,7 @@ export default function ControlsPage() {
                 <label className="text-slate-400 block mb-1 font-medium">Select CCMS Feeder Panel</label>
                 <select
                   value={selectedFeederId}
-                  onChange={(e) => setSelectedFeederId(e.target.value)}
+                  onChange={(e) => { setSelectedFeederId(e.target.value); }}
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-200 font-mono text-xs focus:outline-none focus:border-amber-500"
                 >
                   {feeders.map((f) => (
@@ -394,7 +396,7 @@ export default function ControlsPage() {
                 <input
                   type="text"
                   value={selectedDeviceId}
-                  onChange={(e) => setSelectedDeviceId(e.target.value)}
+                  onChange={(e) => { setSelectedDeviceId(e.target.value); }}
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-200 font-mono text-xs focus:outline-none focus:border-amber-500"
                   placeholder="e.g. SIM-GBL-0001"
                   required
@@ -410,7 +412,7 @@ export default function ControlsPage() {
                 <label className="text-slate-400 block mb-1 font-medium">Geographic Zone</label>
                 <select
                   value={zoneId}
-                  onChange={(e) => setZoneId(e.target.value)}
+                  onChange={(e) => { setZoneId(e.target.value); }}
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-200 font-mono text-xs focus:outline-none focus:border-amber-500"
                 >
                   <option value="ZONE-1">Zone 1 - Main Urban Corridor</option>
@@ -432,7 +434,7 @@ export default function ControlsPage() {
               <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
-                  onClick={() => setCommandAction('TURN_ON')}
+                  onClick={() => { setCommandAction('TURN_ON'); }}
                   className={`py-2.5 rounded-lg font-bold border flex items-center justify-center gap-2 transition ${
                     commandAction === 'TURN_ON'
                       ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500 shadow-sm'
@@ -444,7 +446,7 @@ export default function ControlsPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setCommandAction('TURN_OFF')}
+                  onClick={() => { setCommandAction('TURN_OFF'); }}
                   className={`py-2.5 rounded-lg font-bold border flex items-center justify-center gap-2 transition ${
                     commandAction === 'TURN_OFF'
                       ? 'bg-rose-500/20 text-rose-300 border-rose-500 shadow-sm'
@@ -473,7 +475,7 @@ export default function ControlsPage() {
                   max="100"
                   step="10"
                   value={dimmingLevel}
-                  onChange={(e) => setDimmingLevel(parseInt(e.target.value, 10))}
+                  onChange={(e) => { setDimmingLevel(parseInt(e.target.value, 10)); }}
                   className="w-full accent-amber-500 cursor-pointer"
                 />
                 <div className="flex justify-between text-[10px] text-slate-500 font-mono mt-1">
@@ -599,7 +601,7 @@ export default function ControlsPage() {
               <input
                 type="text"
                 value={emergencyConfirmText}
-                onChange={(e) => setEmergencyConfirmText(e.target.value)}
+                onChange={(e) => { setEmergencyConfirmText(e.target.value); }}
                 placeholder="Type CONFIRM"
                 className="w-full bg-slate-950 border border-rose-700/60 rounded p-2 text-white font-mono text-xs focus:outline-none focus:border-rose-400 uppercase"
                 autoFocus
@@ -619,7 +621,7 @@ export default function ControlsPage() {
               </button>
               <button
                 type="button"
-                onClick={handleEmergencyExecute}
+                onClick={() => { void handleEmergencyExecute(); }}
                 disabled={emergencyConfirmText.toUpperCase() !== 'CONFIRM' || isSubmitting}
                 className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded text-xs transition disabled:opacity-50"
               >

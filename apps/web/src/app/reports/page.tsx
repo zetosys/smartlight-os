@@ -28,7 +28,7 @@ export default function ReportsPage() {
 
   useEffect(() => {
     if (!selectedUlb) return;
-    loadData();
+    void loadData();
   }, [selectedUlb]);
 
   const loadData = async () => {
@@ -101,7 +101,9 @@ export default function ReportsPage() {
     document.body.removeChild(link);
 
     setDownloadNotice(`Generated and downloaded ${filename}`);
-    setTimeout(() => setDownloadNotice(null), 4000);
+    setTimeout(() => {
+      setDownloadNotice(null);
+    }, 4000);
   };
 
   return (
@@ -122,7 +124,9 @@ export default function ReportsPage() {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={loadData}
+            onClick={() => {
+              void loadData();
+            }}
             disabled={isLoading}
             className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition"
             title="Refresh Reports"
@@ -217,7 +221,9 @@ export default function ReportsPage() {
               </p>
             </div>
             <button
-              onClick={() => handleExportCsv('ENERGY_AUDIT')}
+              onClick={() => {
+                handleExportCsv('ENERGY_AUDIT');
+              }}
               className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-2 border border-slate-700 transition"
             >
               <Download className="w-3.5 h-3.5 text-amber-400" />
@@ -236,7 +242,9 @@ export default function ReportsPage() {
               </p>
             </div>
             <button
-              onClick={() => handleExportCsv('SLA_COMPLIANCE')}
+              onClick={() => {
+                handleExportCsv('SLA_COMPLIANCE');
+              }}
               className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-2 border border-slate-700 transition"
             >
               <Download className="w-3.5 h-3.5 text-sky-400" />
@@ -255,7 +263,9 @@ export default function ReportsPage() {
               </p>
             </div>
             <button
-              onClick={() => handleExportCsv('EXECUTIVE_SUMMARY')}
+              onClick={() => {
+                handleExportCsv('EXECUTIVE_SUMMARY');
+              }}
               className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-2 border border-slate-700 transition"
             >
               <Download className="w-3.5 h-3.5 text-emerald-400" />

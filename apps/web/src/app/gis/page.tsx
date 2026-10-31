@@ -253,7 +253,7 @@ export default function GisPage() {
   }, [selectedUlb, selectedLayer, showZones, ulbCoords, isGbl, selectedFeature]);
 
   useEffect(() => {
-    loadGeoJson();
+    void loadGeoJson();
   }, [loadGeoJson]);
 
   // Seed full fleet in memory via Simulator endpoint
@@ -269,11 +269,13 @@ export default function GisPage() {
         text: `Full municipal fleet of ${ulbCoords.targetFleet} streetlights loaded into GIS spatial layer.`,
         type: 'success',
       });
-    } catch (e: any) {
-      setActionMessage({ text: `Fleet Seeding failed: ${e.message}`, type: 'error' });
+    } catch (e: unknown) {
+      setActionMessage({ text: `Fleet Seeding failed: ${e instanceof Error ? e.message : 'Unknown error'}`, type: 'error' });
     } finally {
       setSeedingFleet(false);
-      setTimeout(() => setActionMessage(null), 6000);
+      setTimeout(() => {
+        setActionMessage(null);
+      }, 6000);
     }
   };
 
@@ -626,11 +628,13 @@ export default function GisPage() {
         text: `Command Confirmed: ${feature.properties.externalCode || feature.id} switched ${targetState ? 'ON' : 'OFF'}.`,
         type: 'success',
       });
-    } catch (e: any) {
-      setActionMessage({ text: `Command failed: ${e.message}`, type: 'error' });
+    } catch (e: unknown) {
+      setActionMessage({ text: `Command failed: ${e instanceof Error ? e.message : 'Unknown error'}`, type: 'error' });
     } finally {
       setActionPending(false);
-      setTimeout(() => setActionMessage(null), 5000);
+      setTimeout(() => {
+        setActionMessage(null);
+      }, 5000);
     }
   };
 
@@ -656,11 +660,13 @@ export default function GisPage() {
         text: `Work order dispatched to municipal field maintenance team.`,
         type: 'success',
       });
-    } catch (e: any) {
-      setActionMessage({ text: `Failed to create ticket: ${e.message}`, type: 'error' });
+    } catch (e: unknown) {
+      setActionMessage({ text: `Failed to create ticket: ${e instanceof Error ? e.message : 'Unknown error'}`, type: 'error' });
     } finally {
       setActionPending(false);
-      setTimeout(() => setActionMessage(null), 5000);
+      setTimeout(() => {
+        setActionMessage(null);
+      }, 5000);
     }
   };
 
@@ -693,7 +699,12 @@ export default function GisPage() {
             <AlertTriangle className="w-4 h-4 text-rose-400" />
           )}
           <span>{actionMessage.text}</span>
-          <button onClick={() => setActionMessage(null)} className="ml-2 text-slate-400 hover:text-white">
+          <button
+            onClick={() => {
+              setActionMessage(null);
+            }}
+            className="ml-2 text-slate-400 hover:text-white"
+          >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -718,7 +729,9 @@ export default function GisPage() {
           {/* Map Engine View Switcher (Leaflet OSM vs SCADA Vector Canvas) */}
           <div className="flex items-center bg-slate-950 border border-slate-700/80 rounded-lg p-0.5 font-mono text-xs shadow-inner">
             <button
-              onClick={() => setMapMode('osm')}
+              onClick={() => {
+                setMapMode('osm');
+              }}
               className={`px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 ${
                 mapMode === 'osm'
                   ? 'bg-amber-500 text-slate-950 shadow'
@@ -730,7 +743,9 @@ export default function GisPage() {
               <span>OpenStreetMap</span>
             </button>
             <button
-              onClick={() => setMapMode('canvas')}
+              onClick={() => {
+                setMapMode('canvas');
+              }}
               className={`px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 ${
                 mapMode === 'canvas'
                   ? 'bg-amber-500 text-slate-950 shadow'
@@ -745,7 +760,9 @@ export default function GisPage() {
 
           {poles.length < 500 && (
             <button
-              onClick={handleSeedFullFleet}
+              onClick={() => {
+                void handleSeedFullFleet();
+              }}
               disabled={seedingFleet}
               className="px-3 py-1.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-semibold rounded text-xs flex items-center gap-1.5 shadow"
               title={`Load entire municipal fleet of ${ulbCoords.targetFleet} lights`}
@@ -756,7 +773,9 @@ export default function GisPage() {
           )}
 
           <button
-            onClick={() => setShowRoads(!showRoads)}
+            onClick={() => {
+              setShowRoads(!showRoads);
+            }}
             className={`px-2.5 py-1.5 rounded text-xs font-medium border transition-colors flex items-center gap-1.5 ${
               showRoads ? 'bg-amber-950/80 text-amber-300 border-amber-800/60' : 'bg-slate-800 text-slate-400 border-slate-700'
             }`}
@@ -767,7 +786,9 @@ export default function GisPage() {
           </button>
 
           <button
-            onClick={() => setShowHalos(!showHalos)}
+            onClick={() => {
+              setShowHalos(!showHalos);
+            }}
             className={`px-2.5 py-1.5 rounded text-xs font-medium border transition-colors flex items-center gap-1.5 ${
               showHalos ? 'bg-amber-950/80 text-amber-300 border-amber-800/60' : 'bg-slate-800 text-slate-400 border-slate-700'
             }`}
@@ -778,7 +799,9 @@ export default function GisPage() {
           </button>
 
           <button
-            onClick={() => setShowPhaseLines(!showPhaseLines)}
+            onClick={() => {
+              setShowPhaseLines(!showPhaseLines);
+            }}
             className={`px-2.5 py-1.5 rounded text-xs font-medium border transition-colors flex items-center gap-1.5 ${
               showPhaseLines ? 'bg-sky-950/80 text-sky-300 border-sky-800/60' : 'bg-slate-800 text-slate-400 border-slate-700'
             }`}
@@ -789,7 +812,9 @@ export default function GisPage() {
           </button>
 
           <button
-            onClick={() => setShowZones(!showZones)}
+            onClick={() => {
+              setShowZones(!showZones);
+            }}
             className={`px-2.5 py-1.5 rounded text-xs font-medium border transition-colors flex items-center gap-1.5 ${
               showZones ? 'bg-indigo-950/80 text-indigo-300 border-indigo-800/60' : 'bg-slate-800 text-slate-400 border-slate-700'
             }`}
@@ -800,7 +825,9 @@ export default function GisPage() {
           </button>
 
           <button
-            onClick={() => setShowLoraLinks(!showLoraLinks)}
+            onClick={() => {
+              setShowLoraLinks(!showLoraLinks);
+            }}
             className={`px-2.5 py-1.5 rounded text-xs font-medium border transition-colors flex items-center gap-1.5 ${
               showLoraLinks ? 'bg-purple-950/80 text-purple-300 border-purple-800/60' : 'bg-slate-800 text-slate-400 border-slate-700'
             }`}
@@ -811,7 +838,9 @@ export default function GisPage() {
           </button>
 
           <button
-            onClick={() => setShowJsonModal(true)}
+            onClick={() => {
+              setShowJsonModal(true);
+            }}
             className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-xs font-medium flex items-center gap-1.5"
             title="Inspect RFC 7946 GeoJSON FeatureCollection"
           >
@@ -820,7 +849,9 @@ export default function GisPage() {
           </button>
 
           <button
-            onClick={loadGeoJson}
+            onClick={() => {
+              void loadGeoJson();
+            }}
             disabled={loading}
             className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700"
             title="Refresh GIS spatial data"
@@ -842,7 +873,9 @@ export default function GisPage() {
               type="text"
               placeholder="Search pole / panel..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+              }}
               className="w-full bg-slate-950 border border-slate-800 rounded pl-8 pr-2 py-1 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:border-amber-500"
             />
           </div>
@@ -856,7 +889,9 @@ export default function GisPage() {
               {(['all', 'poles', 'feeders', 'gateways', 'zones'] as const).map((layer) => (
                 <button
                   key={layer}
-                  onClick={() => setSelectedLayer(layer)}
+                  onClick={() => {
+                    setSelectedLayer(layer);
+                  }}
                   className={`px-2.5 py-0.5 rounded capitalize font-medium transition-colors ${
                     selectedLayer === layer
                       ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
@@ -876,7 +911,9 @@ export default function GisPage() {
             </span>
             <select
               value={selectedFeederCircuit}
-              onChange={(e) => setSelectedFeederCircuit(e.target.value)}
+              onChange={(e) => {
+                setSelectedFeederCircuit(e.target.value);
+              }}
               className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded px-2 py-1 font-mono focus:outline-none focus:border-amber-500 max-w-xs"
             >
               <option value="ALL">All Feeder Circuits ({feeders.length})</option>
@@ -895,7 +932,9 @@ export default function GisPage() {
             </span>
             <select
               value={selectedGatewayCluster}
-              onChange={(e) => setSelectedGatewayCluster(e.target.value)}
+              onChange={(e) => {
+                setSelectedGatewayCluster(e.target.value);
+              }}
               className="bg-slate-950 border border-slate-800 text-purple-300 text-xs rounded px-2 py-1 font-mono focus:outline-none focus:border-purple-500 max-w-xs"
             >
               <option value="ALL">All LoRa Gateways ({allGateways.length || gateways.length})</option>
@@ -914,7 +953,9 @@ export default function GisPage() {
               {(['ALL', 'R', 'Y', 'B'] as const).map((phase) => (
                 <button
                   key={phase}
-                  onClick={() => setPhaseFilter(phase)}
+                  onClick={() => {
+                    setPhaseFilter(phase);
+                  }}
                   className={`px-2 py-0.5 rounded font-bold transition-colors ${
                     phaseFilter === phase
                       ? phase === 'R'
@@ -940,7 +981,9 @@ export default function GisPage() {
               {(['ALL', '35', '70', '110'] as const).map((w) => (
                 <button
                   key={w}
-                  onClick={() => setWattageFilter(w)}
+                  onClick={() => {
+                    setWattageFilter(w);
+                  }}
                   className={`px-2 py-0.5 rounded font-medium transition-colors ${
                     wattageFilter === w
                       ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
@@ -960,7 +1003,9 @@ export default function GisPage() {
             </span>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value as 'ALL' | 'ON' | 'OFF' | 'FAULT' | 'OFFLINE');
+              }}
               className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded px-2 py-1 font-mono focus:outline-none focus:border-amber-500"
             >
               <option value="ALL">All Statuses</option>
@@ -1066,14 +1111,18 @@ export default function GisPage() {
             {/* Floating Navigation & Zoom Controls */}
             <div className="absolute top-4 left-4 z-20 flex flex-col gap-1.5 bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 shadow-xl backdrop-blur">
               <button
-                onClick={() => setZoomLevel((z) => Math.min(z + 0.35, 5.5))}
+                onClick={() => {
+                  setZoomLevel((z) => Math.min(z + 0.35, 5.5));
+                }}
                 className="p-1.5 hover:bg-slate-800 text-slate-300 hover:text-white rounded"
                 title="Zoom In (or use mouse wheel)"
               >
                 <ZoomIn className="w-4 h-4" />
               </button>
               <button
-                onClick={() => setZoomLevel((z) => Math.max(z - 0.35, 0.65))}
+                onClick={() => {
+                  setZoomLevel((z) => Math.max(z - 0.35, 0.65));
+                }}
                 className="p-1.5 hover:bg-slate-800 text-slate-300 hover:text-white rounded"
                 title="Zoom Out"
               >
@@ -1217,7 +1266,12 @@ export default function GisPage() {
                         .join(' ');
 
                       return (
-                        <g key={`zone-${zone.id}`} onClick={() => centerOnFeature(zone)}>
+                        <g
+                          key={`zone-${zone.id}`}
+                          onClick={() => {
+                            centerOnFeature(zone);
+                          }}
+                        >
                           <polygon
                             points={pointsStr}
                             fill="#38bdf8"
@@ -1591,7 +1645,12 @@ export default function GisPage() {
                       </span>
                     </div>
                   </div>
-                  <button onClick={() => setSelectedFeature(null)} className="text-slate-400 hover:text-white">
+                  <button
+                    onClick={() => {
+                      setSelectedFeature(null);
+                    }}
+                    className="text-slate-400 hover:text-white"
+                  >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
@@ -1621,7 +1680,9 @@ export default function GisPage() {
 
                     {/* Quick Command Switching Button */}
                     <button
-                      onClick={() => handleToggleState(selectedFeature)}
+                      onClick={() => {
+                        void handleToggleState(selectedFeature);
+                      }}
                       disabled={actionPending}
                       className={`w-full py-2 rounded text-xs font-semibold flex items-center justify-center gap-2 transition-colors ${
                         selectedFeature.properties.reportedOn
@@ -1783,7 +1844,9 @@ export default function GisPage() {
 
                     {/* Circuit Isolation Button */}
                     <button
-                      onClick={() => setSelectedFeederCircuit(selectedFeature.properties.panelCode || 'ALL')}
+                      onClick={() => {
+                        setSelectedFeederCircuit(selectedFeature.properties.panelCode || 'ALL');
+                      }}
                       className="w-full py-2 bg-sky-950 hover:bg-sky-900 text-sky-200 border border-sky-800/80 rounded text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
                     >
                       <Zap className="w-3.5 h-3.5 text-amber-400" />
@@ -1895,7 +1958,12 @@ export default function GisPage() {
                   RFC 7946 GeoJSON FeatureCollection Inspector
                 </h3>
               </div>
-              <button onClick={() => setShowJsonModal(false)} className="text-slate-400 hover:text-white">
+              <button
+                onClick={() => {
+                  setShowJsonModal(false);
+                }}
+                className="text-slate-400 hover:text-white"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1932,7 +2000,9 @@ export default function GisPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setShowWorkOrderModal(false)}
+                onClick={() => {
+                  setShowWorkOrderModal(false);
+                }}
                 className="text-slate-400 hover:text-white"
               >
                 <X className="w-4 h-4" />
@@ -1946,7 +2016,9 @@ export default function GisPage() {
                   type="text"
                   required
                   value={workOrderTitle}
-                  onChange={(e) => setWorkOrderTitle(e.target.value)}
+                  onChange={(e) => {
+                    setWorkOrderTitle(e.target.value);
+                  }}
                   className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-white focus:outline-none focus:border-amber-500 font-mono"
                 />
               </div>
@@ -1955,7 +2027,9 @@ export default function GisPage() {
                 <label className="block text-slate-400 font-medium mb-1">Priority</label>
                 <select
                   value={workOrderPriority}
-                  onChange={(e) => setWorkOrderPriority(e.target.value as any)}
+                  onChange={(e) => {
+                    setWorkOrderPriority(e.target.value as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW');
+                  }}
                   className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-white focus:outline-none focus:border-amber-500"
                 >
                   <option value="CRITICAL">CRITICAL (Immediate Dispatch)</option>
@@ -1970,7 +2044,9 @@ export default function GisPage() {
                 <textarea
                   rows={3}
                   value={workOrderDescription}
-                  onChange={(e) => setWorkOrderDescription(e.target.value)}
+                  onChange={(e) => {
+                    setWorkOrderDescription(e.target.value);
+                  }}
                   placeholder="Specify symptoms: blown MOV surge protector, driver failure, physical mast damage..."
                   className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-white focus:outline-none focus:border-amber-500"
                 />
@@ -1980,7 +2056,9 @@ export default function GisPage() {
             <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
               <button
                 type="button"
-                onClick={() => setShowWorkOrderModal(false)}
+                onClick={() => {
+                  setShowWorkOrderModal(false);
+                }}
                 className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs"
               >
                 Cancel

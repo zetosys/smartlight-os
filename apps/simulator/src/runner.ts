@@ -107,10 +107,12 @@ export class SimulatorService {
 
       for (let i = 0; i < countToAffect; i++) {
         const randIdx = Math.floor(this.rng.next() * candidates.length);
-        const dev = candidates[randIdx];
-        this.activeFaults.set(dev.external_id, { faultCode: dto.faultCode, injectedAt: nowIso });
-        this.adapter.injectFault(dev.external_id, dto.faultCode);
-        affectedCount++;
+        const dev = candidates.at(randIdx);
+        if (dev) {
+          this.activeFaults.set(dev.external_id, { faultCode: dto.faultCode, injectedAt: nowIso });
+          this.adapter.injectFault(dev.external_id, dto.faultCode);
+          affectedCount++;
+        }
       }
     }
 
@@ -178,7 +180,8 @@ export class SimulatorService {
 
     for (let i = 0; i < count; i++) {
       const randIdx = Math.floor(this.rng.next() * total);
-      const dev = this.fleet.devices[randIdx];
+      const dev = this.fleet.devices.at(randIdx);
+      if (!dev) continue;
       const faultInfo = this.activeFaults.get(dev.external_id) || this.activeFaults.get(dev.id);
       const faults = faultInfo ? [faultInfo.faultCode] : [];
 

@@ -29,7 +29,7 @@ export class OrganizationsController {
 
   @Patch('ulbs/:id')
   @RequirePermissions('org.manage')
-  updateUlb(@Param('id') id: string, @Body() body: any) {
+  updateUlb(@Param('id') id: string, @Body() body: Record<string, unknown>) {
     return this.orgService.updateUlb(id, body);
   }
 }

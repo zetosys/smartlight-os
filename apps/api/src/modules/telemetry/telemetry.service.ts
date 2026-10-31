@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
-import { DatabaseService } from '../../database/database.service';
+import { DatabaseService, MemoryDevice } from '../../database/database.service';
 import {
   OverviewDashboardKpi,
   TelemetryReading,
@@ -78,7 +78,7 @@ export class TelemetryService {
     };
   }
 
-  private evaluateAnomalies(dev: any, reading: TelemetryReading): number {
+  private evaluateAnomalies(dev: MemoryDevice, reading: TelemetryReading): number {
     let count = 0;
     const ulbId = dev.ulb_id;
 
@@ -350,12 +350,24 @@ export class TelemetryService {
 
     if (resolution === '5m' && rawList.length > 0) {
       // Group by 5-minute buckets
-      const buckets = new Map<number, any[]>();
-      for (const item of rawList) {
+      interface RawTelemetryItem {
+        observed_at: string;
+        voltage?: number;
+        current_amp?: number;
+        power_watts?: number;
+        power_factor?: number;
+        energy_kwh?: number;
+      }
+      const buckets = new Map<number, RawTelemetryItem[]>();
+      for (const item of (rawList as unknown as RawTelemetryItem[])) {
         const timeMs = new Date(item.observed_at).getTime();
         const bucketKey = Math.floor(timeMs / 300000) * 300000;
-        if (!buckets.has(bucketKey)) buckets.set(bucketKey, []);
-        buckets.get(bucketKey)!.push(item);
+        const bucketList = buckets.get(bucketKey);
+        if (bucketList) {
+          bucketList.push(item);
+        } else {
+          buckets.set(bucketKey, [item]);
+        }
       }
 
       const points: TimeSeriesPoint[] = [];

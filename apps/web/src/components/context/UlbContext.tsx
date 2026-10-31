@@ -172,7 +172,7 @@ export const UlbProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ApiClient.setActiveUlbId(id);
   };
 
-  const setCurrentAccount = async (email: string) => {
+  const setCurrentAccount = (email: string) => {
     const acc = SEED_ACCOUNTS.find((a) => a.email === email);
     if (acc) {
       setCurrentUser(acc);
@@ -181,23 +181,25 @@ export const UlbProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedUlbId(acc.allowedUlbIds[0]);
       }
       // Attempt login to get live token
-      try {
-        const res = await ApiClient.fetch<{ accessToken: string }>('auth/login', {
-          method: 'POST',
-          body: JSON.stringify({ email: acc.email, password: 'SmartLight@2026!' }),
-        });
-        if (res?.accessToken) {
-          ApiClient.setToken(res.accessToken);
+      void (async () => {
+        try {
+          const res = await ApiClient.fetch<{ accessToken: string }>('auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ email: acc.email, password: 'SmartLight@2026!' }),
+          });
+          if (res?.accessToken) {
+            ApiClient.setToken(res.accessToken);
+          }
+        } catch {
+          // Dev fallback
         }
-      } catch {
-        // Dev fallback
-      }
+      })();
     }
   };
 
   const checkHealth = async () => {
     try {
-      const res = await fetch('http://localhost:4000/health').then((r) => r.json());
+      const res = (await fetch('http://localhost:4000/health').then((r) => r.json())) as { status?: string };
       setIsBackendOnline(res?.status === 'healthy' || res?.status === 'degraded');
     } catch {
       setIsBackendOnline(false);
@@ -205,9 +207,13 @@ export const UlbProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   useEffect(() => {
-    checkHealth();
-    const interval = setInterval(checkHealth, 15000);
-    return () => clearInterval(interval);
+    void checkHealth();
+    const interval = setInterval(() => {
+      void checkHealth();
+    }, 15000);
+    return () => {
+      clearInterval(interval);
+    };
   }, []);
 
   const selectedUlb = INITIAL_ULBS.find((u) => u.id === selectedUlbId) || null;

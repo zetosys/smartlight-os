@@ -38,7 +38,7 @@ export class UsersService {
       return {
         id: u.id,
         email: u.email,
-        name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email,
+        name: `${String(u.first_name || '')} ${String(u.last_name || '')}`.trim() || u.email,
         firstName: u.first_name || '',
         lastName: u.last_name || '',
         active: u.active,
@@ -74,7 +74,7 @@ export class UsersService {
     return {
       id: u.id,
       email: u.email,
-      name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email,
+      name: `${String(u.first_name || '')} ${String(u.last_name || '')}`.trim() || u.email,
       firstName: u.first_name || '',
       lastName: u.last_name || '',
       active: u.active,

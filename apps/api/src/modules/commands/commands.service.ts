@@ -6,7 +6,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { DatabaseService } from '../../database/database.service';
+import { DatabaseService, MemoryCommand, MemoryDevice } from '../../database/database.service';
 import { generateSecureId } from '../../common/crypto-id.util';
 import { AdapterRegistry, DeviceCommand as AdapterDeviceCommand } from '@smartlight/device-contracts';
 import {
@@ -303,18 +303,20 @@ export class CommandsService {
         return allDevices.filter((d) => lumsInPoles.includes(d.luminaire_id));
       }
 
-      case 'DEVICES':
-        if (!dto.deviceIds || dto.deviceIds.length === 0) return [];
+      case 'DEVICES': {
+        const targetIds = dto.deviceIds;
+        if (!targetIds || targetIds.length === 0) return [];
         return allDevices.filter(
-          (d) => dto.deviceIds!.includes(d.id) || dto.deviceIds!.includes(d.external_id),
+          (d) => targetIds.includes(d.id) || targetIds.includes(d.external_id),
         );
+      }
 
       default:
         return [];
     }
   }
 
-  private async processCommandDispatch(commandRecord: any, device: any, user: AuthContextUser) {
+  private async processCommandDispatch(commandRecord: MemoryCommand, device: MemoryDevice, user: AuthContextUser) {
     const registry = AdapterRegistry.getInstance();
 
     if (!registry.hasAdapter(device.adapter_key)) {
@@ -552,7 +554,7 @@ export class CommandsService {
       const batchDto: CreateBatchCommandDto = {
         ulbId: sched.ulb_id,
         type: 'TURN_ON',
-        targetType: (sched.scope as any) || 'ULB',
+        targetType: (sched.scope as 'ULB' | 'ZONE' | 'WARD' | 'FEEDER' | 'STREET' | 'DEVICES' | undefined) ?? 'ULB',
         targetId: sched.target_id,
         idempotencyKey: batchIdempotencyKey,
         payload: {

@@ -33,7 +33,7 @@ export class MaintenanceService {
     status?: string,
     severity?: string,
     code?: string,
-  ): any[] {
+  ) {
     let list = this.db.memoryStore.alerts;
 
     if (ulbId) {
@@ -141,7 +141,7 @@ export class MaintenanceService {
       alert_id: alert.id,
       device_id: alert.device_id,
       assigned_to: tech?.id,
-      assigned_to_name: tech ? `${tech.first_name} ${tech.last_name}` : 'Field Technician',
+      assigned_to_name: tech ? `${String(tech.first_name)} ${String(tech.last_name)}` : 'Field Technician',
       title: `[${alert.code}] Repair for ${targetLabel}`,
       description: alert.message || `Automated work order tripped by ${alert.code} threshold anomaly.`,
       priority,
@@ -199,7 +199,7 @@ export class MaintenanceService {
         deviceId: t.device_id,
         deviceCode: dev?.external_id || t.device_id,
         assignedTo: t.assigned_to,
-        assignedToName: tech ? `${tech.first_name} ${tech.last_name}` : t.assigned_to_name,
+        assignedToName: tech ? `${String(tech.first_name)} ${String(tech.last_name)}` : t.assigned_to_name,
         status: (t.status || 'OPEN') as TicketStatus,
         title: t.title,
         description: t.description,
@@ -258,7 +258,7 @@ export class MaintenanceService {
       alert_id: dto.alertId,
       device_id: dto.deviceId,
       assigned_to: dto.assignedTo,
-      assigned_to_name: tech ? `${tech.first_name} ${tech.last_name}` : undefined,
+      assigned_to_name: tech ? `${String(tech.first_name)} ${String(tech.last_name)}` : undefined,
       title: dto.title,
       description: dto.description,
       priority: dto.priority || 'MEDIUM',
@@ -291,7 +291,7 @@ export class MaintenanceService {
     if (dto.assignedTo !== undefined) {
       t.assigned_to = dto.assignedTo;
       const tech = this.db.memoryStore.users.find((u) => u.id === dto.assignedTo);
-      if (tech) t.assigned_to_name = `${tech.first_name} ${tech.last_name}`;
+      if (tech) t.assigned_to_name = `${String(tech.first_name)} ${String(tech.last_name)}`;
     }
     if (dto.resolutionNotes) t.resolution_notes = dto.resolutionNotes;
 
@@ -345,11 +345,11 @@ export class MaintenanceService {
 
     // Verify technician ULB boundary
     if (tech.ulb_id && tech.ulb_id !== t.ulb_id) {
-      throw new ForbiddenException(`Technician '${tech.email}' belongs to a different ULB`);
+      throw new ForbiddenException(`Technician '${String(tech.email)}' belongs to a different ULB`);
     }
 
     t.assigned_to = assignedTo;
-    t.assigned_to_name = `${tech.first_name} ${tech.last_name}`;
+    t.assigned_to_name = `${String(tech.first_name)} ${String(tech.last_name)}`;
     t.updated_at = new Date().toISOString();
 
     if (t.status === 'OPEN') {
@@ -387,7 +387,7 @@ export class MaintenanceService {
       return {
         id: u.id,
         email: u.email,
-        name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email,
+        name: `${String(u.first_name || '')} ${String(u.last_name || '')}`.trim() || u.email,
         roleCode: u.role_code,
         ulbId: u.ulb_id,
         ulbName: ulb?.name || 'All ULBs (Roaming)',
@@ -416,7 +416,7 @@ export class MaintenanceService {
 
     part.quantity_in_stock += quantity;
 
-    this.recordAudit(user, null as any, 'SPARE_PART_RESTOCKED', part.id, {
+    this.recordAudit(user, null, 'SPARE_PART_RESTOCKED', part.id, {
       code: part.code,
       added: quantity,
       newStock: part.quantity_in_stock,
@@ -445,7 +445,7 @@ export class MaintenanceService {
 
   private recordAudit(
     user: AuthContextUser,
-    ulbId: string,
+    ulbId: string | null,
     action: string,
     entityId: string,
     details: Record<string, unknown>,

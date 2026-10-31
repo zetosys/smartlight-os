@@ -28,7 +28,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     if (!selectedUlb) return;
-    loadData();
+    void loadData();
   }, [selectedUlb, period]);
 
   const loadData = async () => {
@@ -100,7 +100,9 @@ export default function AnalyticsPage() {
             {(['day', 'week', 'month', 'year'] as const).map((p) => (
               <button
                 key={p}
-                onClick={() => setPeriod(p)}
+                onClick={() => {
+                  setPeriod(p);
+                }}
                 className={`px-3 py-1 rounded transition uppercase ${
                   period === p
                     ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30'
@@ -113,7 +115,9 @@ export default function AnalyticsPage() {
           </div>
 
           <button
-            onClick={loadData}
+            onClick={() => {
+              void loadData();
+            }}
             disabled={isLoading}
             className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition"
             title="Refresh Analytics"

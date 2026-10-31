@@ -19,7 +19,7 @@ export default function LoginPage() {
 
   // MFA Challenge State
   const [mfaChallenge, setMfaChallenge] = useState<{
-    token: string;
+    challengeToken: string;
     method: string;
   } | null>(null);
   const [mfaCode, setMfaCode] = useState('');
@@ -38,17 +38,18 @@ export default function LoginPage() {
       if (res.mfaRequired && res.mfaChallengeToken) {
         // Step 2: Move to MFA challenge verification
         setMfaChallenge({
-          token: res.mfaChallengeToken,
+          challengeToken: res.mfaChallengeToken,
           method: res.mfaMethod || 'TOTP',
         });
       } else if (res.accessToken) {
         // Direct login success
         ApiClient.setToken(res.accessToken);
-        await setCurrentAccount(email);
+        setCurrentAccount(email);
         router.push('/dashboard');
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Login failed. Verify credentials.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg(msg || 'Login failed. Verify credentials.');
     } finally {
       setLoading(false);
     }
@@ -64,18 +65,19 @@ export default function LoginPage() {
       const res = await ApiClient.fetch<LoginResponse>('auth/mfa/verify', {
         method: 'POST',
         body: JSON.stringify({
-          mfaChallengeToken: mfaChallenge.token,
+          mfaChallengeToken: mfaChallenge.challengeToken,
           code: mfaCode,
         }),
       });
 
       if (res.accessToken) {
         ApiClient.setToken(res.accessToken);
-        await setCurrentAccount(email);
+        setCurrentAccount(email);
         router.push('/dashboard');
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Invalid MFA code. For dev/demo, enter 123456');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg(msg || 'Invalid MFA code. For dev/demo, enter 123456');
     } finally {
       setLoading(false);
     }
@@ -118,7 +120,7 @@ export default function LoginPage() {
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-5">
           {!mfaChallenge ? (
             /* Step 1: Credentials Form */
-            <form onSubmit={handleCredentialsSubmit} className="space-y-4">
+            <form onSubmit={(e) => { void handleCredentialsSubmit(e); }} className="space-y-4">
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1">
                   Operator / Admin Email
@@ -131,7 +133,7 @@ export default function LoginPage() {
                     type="email"
                     required
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => { setEmail(e.target.value); }}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition font-mono"
                     placeholder="operator@smartlight.os"
                   />
@@ -150,7 +152,7 @@ export default function LoginPage() {
                     type="password"
                     required
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => { setPassword(e.target.value); }}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition font-mono"
                     placeholder="••••••••••••"
                   />
@@ -168,7 +170,7 @@ export default function LoginPage() {
             </form>
           ) : (
             /* Step 2: MFA Verification Form */
-            <form onSubmit={handleMfaSubmit} className="space-y-4">
+            <form onSubmit={(e) => { void handleMfaSubmit(e); }} className="space-y-4">
               <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs space-y-1">
                 <div className="font-semibold text-amber-300 flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-amber-400" />
@@ -196,7 +198,7 @@ export default function LoginPage() {
                     autoFocus
                     required
                     value={mfaCode}
-                    onChange={(e) => setMfaCode(e.target.value)}
+                    onChange={(e) => { setMfaCode(e.target.value); }}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-base text-center tracking-widest text-amber-400 font-mono placeholder-slate-700 focus:outline-none focus:border-amber-500 transition"
                     placeholder="123456"
                   />
@@ -206,7 +208,7 @@ export default function LoginPage() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setMfaChallenge(null)}
+                  onClick={() => { setMfaChallenge(null); }}
                   className="w-1/3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition"
                 >
                   Back
@@ -233,7 +235,7 @@ export default function LoginPage() {
                 <button
                   key={acc.email}
                   type="button"
-                  onClick={() => handleQuickLogin(acc.email)}
+                  onClick={() => { handleQuickLogin(acc.email); }}
                   className={`p-2 rounded border text-left flex items-center justify-between transition ${
                     email === acc.email
                       ? 'bg-amber-500/10 text-amber-300 border-amber-500/40'

@@ -115,7 +115,7 @@ export default function RolePortalsPage() {
       prev.map((item) => (item.code === partCode ? { ...item, qty: Math.max(0, item.qty - 1) } : item)),
     );
     setActionNotice(`Ticket #${ticketId} marked COMPLETED. 1x ${partCode} deducted from van inventory. Linked GIS fault cleared.`);
-    setTimeout(() => setActionNotice(null), 5000);
+    setTimeout(() => { setActionNotice(null); }, 5000);
   };
 
   // Control Operator Portal States
@@ -136,7 +136,7 @@ export default function RolePortalsPage() {
       }),
     );
     setActionNotice(`Command dispatched to ${feederCode}: Contactor toggled with idempotent replay token.`);
-    setTimeout(() => setActionNotice(null), 4000);
+    setTimeout(() => { setActionNotice(null); }, 4000);
   };
 
   const handleDownloadReportCsv = (reportName: string) => {
@@ -229,7 +229,7 @@ export default function RolePortalsPage() {
       {/* Interactive Portal Switcher Tabs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
         <button
-          onClick={() => setActivePortal('technician')}
+          onClick={() => { setActivePortal('technician'); }}
           className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
             activePortal === 'technician'
               ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-lg shadow-amber-500/10'
@@ -247,7 +247,7 @@ export default function RolePortalsPage() {
         </button>
 
         <button
-          onClick={() => setActivePortal('operator')}
+          onClick={() => { setActivePortal('operator'); }}
           className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
             activePortal === 'operator'
               ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-lg shadow-amber-500/10'
@@ -265,7 +265,7 @@ export default function RolePortalsPage() {
         </button>
 
         <button
-          onClick={() => setActivePortal('auditor')}
+          onClick={() => { setActivePortal('auditor'); }}
           className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
             activePortal === 'auditor'
               ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-lg shadow-amber-500/10'
@@ -283,7 +283,7 @@ export default function RolePortalsPage() {
         </button>
 
         <button
-          onClick={() => setActivePortal('reports')}
+          onClick={() => { setActivePortal('reports'); }}
           className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
             activePortal === 'reports'
               ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-lg shadow-amber-500/10'
@@ -301,7 +301,7 @@ export default function RolePortalsPage() {
         </button>
 
         <button
-          onClick={() => setActivePortal('admin')}
+          onClick={() => { setActivePortal('admin'); }}
           className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
             activePortal === 'admin'
               ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-lg shadow-amber-500/10'
@@ -319,7 +319,7 @@ export default function RolePortalsPage() {
         </button>
 
         <button
-          onClick={() => setActivePortal('platform')}
+          onClick={() => { setActivePortal('platform'); }}
           className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
             activePortal === 'platform'
               ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-lg shadow-amber-500/10'
@@ -419,7 +419,7 @@ export default function RolePortalsPage() {
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-[11px] text-slate-400 font-mono">SLA Deadline: &lt; 4 Hours (Met)</span>
                       <button
-                        onClick={() => handleResolveTicket(t.id, t.recommendedPart)}
+                        onClick={() => { void handleResolveTicket(t.id, t.recommendedPart); }}
                         className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition shadow"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
@@ -457,7 +457,7 @@ export default function RolePortalsPage() {
               </div>
 
               <button
-                onClick={() => setActionNotice('Restock requisition sent to Municipal Central Store Depot.')}
+                onClick={() => { setActionNotice('Restock requisition sent to Municipal Central Store Depot.'); }}
                 className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold border border-slate-700 transition"
               >
                 Request Depot Replenishment
@@ -536,7 +536,7 @@ export default function RolePortalsPage() {
                   </div>
 
                   <button
-                    onClick={() => handleToggleFeeder(f.code)}
+                    onClick={() => { void handleToggleFeeder(f.code); }}
                     className={`w-full py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 ${
                       isOn
                         ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
@@ -571,7 +571,7 @@ export default function RolePortalsPage() {
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setActionNotice('Tender Audit Certificate CSV exported with cryptographic SHA-256 seal.')}
+                onClick={() => { setActionNotice('Tender Audit Certificate CSV exported with cryptographic SHA-256 seal.'); }}
                 className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-mono font-bold flex items-center gap-1.5 transition"
               >
                 <FileDown className="w-3.5 h-3.5 text-amber-400" />
@@ -633,7 +633,7 @@ export default function RolePortalsPage() {
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => handleDownloadReportCsv('MASTER-TENDER-COMPLIANCE')}
+                onClick={() => { handleDownloadReportCsv('MASTER-TENDER-COMPLIANCE'); }}
                 className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 transition shadow"
               >
                 <Download className="w-3.5 h-3.5" />
@@ -765,7 +765,7 @@ export default function RolePortalsPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleDownloadReportCsv('SLA-UPTIME-AUDIT')}
+                  onClick={() => { handleDownloadReportCsv('SLA-UPTIME-AUDIT'); }}
                   className="w-full py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition border border-slate-700"
                 >
                   <Download className="w-3.5 h-3.5 text-emerald-400" />
@@ -781,7 +781,7 @@ export default function RolePortalsPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleDownloadReportCsv('BURNING-HOURS-CERTIFICATE')}
+                  onClick={() => { handleDownloadReportCsv('BURNING-HOURS-CERTIFICATE'); }}
                   className="w-full py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition border border-slate-700"
                 >
                   <Download className="w-3.5 h-3.5 text-amber-400" />
@@ -797,7 +797,7 @@ export default function RolePortalsPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleDownloadReportCsv('ENERGY-FINANCIAL-SAVINGS')}
+                  onClick={() => { handleDownloadReportCsv('ENERGY-FINANCIAL-SAVINGS'); }}
                   className="w-full py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition border border-slate-700"
                 >
                   <Download className="w-3.5 h-3.5 text-sky-400" />
@@ -813,7 +813,7 @@ export default function RolePortalsPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleDownloadReportCsv('MASTER-TENDER-COMPLIANCE')}
+                  onClick={() => { handleDownloadReportCsv('MASTER-TENDER-COMPLIANCE'); }}
                   className="w-full py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition border border-slate-700"
                 >
                   <Download className="w-3.5 h-3.5 text-purple-400" />

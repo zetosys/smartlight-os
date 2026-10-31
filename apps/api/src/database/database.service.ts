@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { generateFleet } from '@smartlight/device-contracts';
+import { getProp } from '../common/get-prop.util';
 
 export interface MemoryFeeder {
   id: string;
@@ -15,6 +16,8 @@ export interface MemoryFeeder {
   meterNumber?: string;
   phase?: '3-PHASE' | 'SINGLE-PHASE';
   location?: { latitude: number; longitude: number };
+  latitude?: number;
+  longitude?: number;
   created_at?: string;
   createdAt?: string;
 }
@@ -28,8 +31,24 @@ export interface MemoryPole {
   external_code?: string;
   externalCode?: string;
   height_meters?: number;
+  heightMeters?: number;
   latitude: number;
   longitude: number;
+  location?: { latitude: number; longitude: number };
+  streetName?: string;
+  feederId?: string | null;
+  feederName?: string;
+  feederPanelCode?: string;
+  gatewayId?: string | null;
+  gatewayExternalCode?: string | null;
+  luminaireWattage?: number;
+  lampType?: string;
+  phaseConnection?: string;
+  deviceExternalId?: string;
+  isOnline?: boolean;
+  reportedOn?: boolean;
+  desiredOn?: boolean;
+  device_id?: string;
   created_at?: string;
   createdAt?: string;
 }
@@ -46,6 +65,57 @@ export interface MemoryLuminaire {
   lamp_type?: string;
   lampType?: string;
   phase_connection?: 'R' | 'Y' | 'B';
+  phaseConnection?: 'R' | 'Y' | 'B';
+  created_at?: string;
+  createdAt?: string;
+}
+
+export interface MemoryGateway {
+  id: string;
+  ulb_id: string;
+  ulbId?: string;
+  feeder_id?: string;
+  feederId?: string;
+  external_code?: string;
+  externalCode?: string;
+  name: string;
+  ip_address?: string;
+  ipAddress?: string;
+  is_online?: boolean;
+  isOnline?: boolean;
+  location?: { latitude: number; longitude: number };
+  latitude?: number;
+  longitude?: number;
+  created_at?: string;
+  createdAt?: string;
+}
+
+export interface MemoryZone {
+  id: string;
+  ulb_id: string;
+  ulbId?: string;
+  code: string;
+  name: string;
+  created_at?: string;
+  createdAt?: string;
+}
+
+export interface MemoryWard {
+  id: string;
+  zone_id: string;
+  zoneId?: string;
+  ward_number: number;
+  name: string;
+  created_at?: string;
+  createdAt?: string;
+}
+
+export interface MemoryStreet {
+  id: string;
+  ward_id: string;
+  wardId?: string;
+  name: string;
+  street_type: string;
   created_at?: string;
   createdAt?: string;
 }
@@ -63,10 +133,13 @@ export interface MemoryDevice {
   adapter_key: string;
   external_id: string;
   desired_on: boolean;
+  desiredOn?: boolean;
   reported_on: boolean;
+  reportedOn?: boolean;
   desired_brightness: number;
   reported_brightness: number;
   is_online: boolean;
+  isOnline?: boolean;
   last_seen_at: string;
   simulated: boolean;
   created_at?: string;
@@ -200,14 +273,6 @@ export interface MemoryRollup {
   peak_load_kw: number;
 }
 
-function getProp<T>(obj: unknown, key1: string, key2?: string, fallback?: T): T {
-  if (typeof obj === 'object' && obj !== null) {
-    const rec = obj as Record<string, unknown>;
-    if (rec[key1] !== undefined) return rec[key1] as T;
-    if (key2 && rec[key2] !== undefined) return rec[key2] as T;
-  }
-  return fallback as T;
-}
 
 @Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {
@@ -249,15 +314,15 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     zones: [
       { id: '50000000-0000-0000-0000-000000000001', ulb_id: '11111111-1111-1111-1111-111111111111', code: 'GBL-Z1', name: 'Zone 1 - Main Town' },
       { id: '50000000-0000-0000-0000-000000000003', ulb_id: '22222222-2222-2222-2222-222222222222', code: 'KTR-Z1', name: 'Zone 1 - Shrine Route' },
-    ],
+    ] as MemoryZone[],
     wards: [
       { id: '60000000-0000-0000-0000-000000000001', zone_id: '50000000-0000-0000-0000-000000000001', ward_number: 1, name: 'Ward 1 - Beehama' },
       { id: '60000000-0000-0000-0000-000000000003', zone_id: '50000000-0000-0000-0000-000000000003', ward_number: 1, name: 'Ward 1 - Bus Stand & Banganga Road' },
-    ],
+    ] as MemoryWard[],
     streets: [
       { id: '70000000-0000-0000-0000-000000000001', ward_id: '60000000-0000-0000-0000-000000000001', name: 'Srinagar-Leh Highway (NH-1D)', street_type: 'HIGHWAY' },
       { id: '70000000-0000-0000-0000-000000000003', ward_id: '60000000-0000-0000-0000-000000000003', name: 'Banganga Pilgrimage Track Road', street_type: 'ARTERIAL' },
-    ],
+    ] as MemoryStreet[],
     feeders: [
       { id: '80000000-0000-0000-0000-000000000001', ulb_id: '11111111-1111-1111-1111-111111111111', name: 'Feeder Panel FP-01 Beehama', panel_code: 'GBL-FP-01', capacity_kw: 25.0, meter_number: 'JKPDD-MTR-90812' },
       { id: '80000000-0000-0000-0000-000000000002', ulb_id: '22222222-2222-2222-2222-222222222222', name: 'Feeder Panel FP-01 Katra Banganga', panel_code: 'KTR-FP-01', capacity_kw: 30.0, meter_number: 'JKPDD-MTR-81723' },
@@ -265,7 +330,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     gateways: [
       { id: '85000000-0000-0000-0000-000000000001', ulb_id: '11111111-1111-1111-1111-111111111111', feeder_id: '80000000-0000-0000-0000-000000000001', external_code: 'GW-GBL-01', name: 'CCMS Gateway 01 Beehama', ip_address: '10.14.20.101', is_online: true },
       { id: '85000000-0000-0000-0000-000000000002', ulb_id: '22222222-2222-2222-2222-222222222222', feeder_id: '80000000-0000-0000-0000-000000000002', external_code: 'GW-KTR-01', name: 'CCMS Gateway 01 Katra', ip_address: '10.14.30.101', is_online: true },
-    ],
+    ] as MemoryGateway[],
     poles: [
       { id: '90000000-0000-0000-0000-000000000001', ulb_id: '11111111-1111-1111-1111-111111111111', street_id: '70000000-0000-0000-0000-000000000001', external_code: 'GBL-POLE-001', height_meters: 9.0, latitude: 34.2168, longitude: 74.7721 },
       { id: '90000000-0000-0000-0000-000000000002', ulb_id: '11111111-1111-1111-1111-111111111111', street_id: '70000000-0000-0000-0000-000000000001', external_code: 'GBL-POLE-002', height_meters: 9.0, latitude: 34.2170, longitude: 74.7728 },

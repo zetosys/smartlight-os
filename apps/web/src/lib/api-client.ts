@@ -21,9 +21,12 @@ export class ApiClient {
     return this.activeUlbId;
   }
 
-  public static async fetch<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  public static async fetch<T = unknown>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    if (endpoint.includes('://') || endpoint.includes('..')) {
+      throw new Error('Invalid relative API endpoint');
+    }
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = `${API_BASE_URL}${cleanEndpoint}`;
+    const url = new URL(cleanEndpoint, API_BASE_URL).toString();
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -46,10 +49,11 @@ export class ApiClient {
         throw new Error(errorData.message || `API error ${res.status}: ${res.statusText}`);
       }
 
-      return await res.json();
-    } catch (err: any) {
+      return (await res.json()) as T;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
       // If server is not reachable, rethrow with friendly message
-      if (err.message.includes('fetch failed') || err.message.includes('NetworkError') || err.message.includes('Failed to fetch')) {
+      if (msg.includes('fetch failed') || msg.includes('NetworkError') || msg.includes('Failed to fetch')) {
         throw new Error(`API Offline: Unable to connect to backend at ${API_BASE_URL}. Ensure apps/api is running.`);
       }
       throw err;

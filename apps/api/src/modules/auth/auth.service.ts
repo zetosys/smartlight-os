@@ -15,7 +15,7 @@ import {
   UserRole,
   ROLE_PERMISSIONS_MAP,
 } from '@smartlight/shared-types';
-import { DatabaseService } from '../../database/database.service';
+import { DatabaseService, MemoryUser } from '../../database/database.service';
 import { generateSecureId } from '../../common/crypto-id.util';
 
 @Injectable()
@@ -74,7 +74,7 @@ export class AuthService {
       return {
         mfaRequired: true,
         mfaChallengeToken: challengeToken,
-        mfaMethod: (user.mfa_method as 'TOTP' | 'EMAIL') || 'TOTP',
+        mfaMethod: (user.mfa_method as 'TOTP' | 'EMAIL' | undefined) ?? 'TOTP',
       };
     }
 
@@ -104,12 +104,13 @@ export class AuthService {
       throw new BadRequestException('Challenge token and verification code are required');
     }
 
-    let decoded: any;
+    let decoded: jwt.JwtPayload;
     try {
-      decoded = jwt.verify(dto.mfaChallengeToken, this.defaultSecret);
-      if (decoded.purpose !== 'MFA_CHALLENGE') {
+      const verified = jwt.verify(dto.mfaChallengeToken, this.defaultSecret);
+      if (typeof verified === 'string' || verified.purpose !== 'MFA_CHALLENGE') {
         throw new Error('Invalid token purpose');
       }
+      decoded = verified;
     } catch {
       throw new UnauthorizedException('MFA challenge token has expired or is invalid');
     }
@@ -149,11 +150,10 @@ export class AuthService {
     };
   }
 
-  public buildAuthContext(userRecord: any): AuthContextUser {
+  public buildAuthContext(userRecord: MemoryUser): AuthContextUser {
     const roleCode = userRecord.role_code as UserRole;
-    const permissions = Object.prototype.hasOwnProperty.call(ROLE_PERMISSIONS_MAP, roleCode)
-      ? ROLE_PERMISSIONS_MAP[roleCode]
-      : [];
+    const rolePermissions = Reflect.get(ROLE_PERMISSIONS_MAP, roleCode) as PermissionCode[] | undefined;
+    const permissions = rolePermissions ?? [];
     const isGlobalAdmin = roleCode === 'PLATFORM_ADMIN';
     const allowedUlbIds = isGlobalAdmin || roleCode === 'AUDITOR'
       ? ['*']
@@ -164,7 +164,7 @@ export class AuthService {
     return {
       id: userRecord.id,
       email: userRecord.email,
-      name: `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() || userRecord.email,
+      name: `${String(userRecord.first_name || '')} ${String(userRecord.last_name || '')}`.trim() || userRecord.email,
       roles: [
         {
           roleCode,
@@ -190,7 +190,7 @@ export class AuthService {
     return this.db.memoryStore.users.map((u) => ({
       id: u.id,
       email: u.email,
-      name: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+      name: `${String(u.first_name || '')} ${String(u.last_name || '')}`.trim(),
       role: u.role_code,
       mfaEnabled: !!u.mfa_enabled,
       allowedUlbIds:

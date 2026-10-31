@@ -64,7 +64,7 @@ export default function SchedulingPage() {
 
       // 2. Fetch configured schedules
       const schedList = await ApiClient.fetch<Schedule[]>(`schedules?ulbId=${selectedUlb.id}`);
-      setSchedules(schedList || []);
+      setSchedules(schedList);
     } catch {
       // Fallback default state if API error
       setSolarTimes({
@@ -93,8 +93,9 @@ export default function SchedulingPage() {
         type: 'success',
         message: `Schedule '${updated.name}' is now ${updated.enabled ? 'ACTIVE' : 'PAUSED'}.`,
       });
-    } catch (err: any) {
-      setNotification({ type: 'error', message: err.message || 'Failed to toggle schedule' });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setNotification({ type: 'error', message: msg || 'Failed to toggle schedule' });
     }
   };
 
@@ -103,8 +104,9 @@ export default function SchedulingPage() {
       await ApiClient.fetch(`schedules/${scheduleId}`, { method: 'DELETE' });
       setSchedules((prev) => prev.filter((s) => s.id !== scheduleId));
       setNotification({ type: 'success', message: 'Schedule profile deleted successfully.' });
-    } catch (err: any) {
-      setNotification({ type: 'error', message: err.message || 'Failed to delete schedule' });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setNotification({ type: 'error', message: msg || 'Failed to delete schedule' });
     }
   };
 
@@ -112,14 +114,15 @@ export default function SchedulingPage() {
     setIsEvaluating(true);
     setNotification(null);
     try {
-      const res = await ApiClient.fetch<any>('schedules/evaluate', { method: 'POST' });
+      const res = await ApiClient.fetch<{ schedulesEvaluated?: number }>('schedules/evaluate', { method: 'POST' });
       setNotification({
         type: 'success',
-        message: `Evaluated ${res.schedulesEvaluated} active schedules. Automation dispatched nightfall switching.`,
+        message: `Evaluated ${res.schedulesEvaluated ?? 0} active schedules. Automation dispatched nightfall switching.`,
       });
-      loadData();
-    } catch (err: any) {
-      setNotification({ type: 'error', message: err.message || 'Failed to trigger schedule evaluation' });
+      void loadData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setNotification({ type: 'error', message: msg || 'Failed to trigger schedule evaluation' });
     } finally {
       setIsEvaluating(false);
     }
@@ -185,7 +188,7 @@ export default function SchedulingPage() {
         </div>
         <div className="flex items-center gap-2.5">
           <button
-            onClick={handleEvaluateNow}
+            onClick={() => { void handleEvaluateNow(); }}
             disabled={isEvaluating}
             className="px-3.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-bold flex items-center gap-1.5 transition disabled:opacity-50"
           >
@@ -193,7 +196,7 @@ export default function SchedulingPage() {
             {isEvaluating ? 'Evaluating...' : 'Evaluate Now'}
           </button>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => { setIsModalOpen(true); }}
             className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -231,7 +234,7 @@ export default function SchedulingPage() {
               Configured Lighting Profiles ({schedules.length})
             </h2>
             <button
-              onClick={loadData}
+              onClick={() => { void loadData(); }}
               disabled={isLoading}
               className="text-slate-400 hover:text-slate-200 transition"
               title="Refresh"
@@ -283,7 +286,7 @@ export default function SchedulingPage() {
 
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleToggle(sched.id)}
+                          onClick={() => { void handleToggle(sched.id); }}
                           className="text-slate-300 hover:text-white transition"
                           title={sched.enabled ? 'Pause Schedule' : 'Activate Schedule'}
                         >
@@ -294,7 +297,7 @@ export default function SchedulingPage() {
                           )}
                         </button>
                         <button
-                          onClick={() => handleDelete(sched.id)}
+                          onClick={() => { void handleDelete(sched.id); }}
                           className="text-slate-500 hover:text-rose-400 transition"
                           title="Delete Schedule"
                         >
@@ -448,21 +451,21 @@ export default function SchedulingPage() {
               </h3>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => { setIsModalOpen(false); }}
                 className="text-slate-400 hover:text-white text-sm"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCreateSchedule} className="space-y-4 text-xs">
+            <form onSubmit={(e) => { void handleCreateSchedule(e); }} className="space-y-4 text-xs">
               <div>
                 <label className="text-slate-400 block mb-1">Schedule Profile Name</label>
                 <input
                   type="text"
                   required
                   value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
+                  onChange={(e) => { setNewName(e.target.value); }}
                   placeholder="e.g. Ganderbal Highway Sunset Profile"
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white text-xs focus:outline-none focus:border-amber-500"
                 />
@@ -473,7 +476,9 @@ export default function SchedulingPage() {
                   <label className="text-slate-400 block mb-1">Target Scope</label>
                   <select
                     value={newScope}
-                    onChange={(e: any) => setNewScope(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                      setNewScope(e.target.value as 'ULB' | 'FEEDER' | 'ZONE');
+                    }}
                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white text-xs focus:outline-none focus:border-amber-500"
                   >
                     <option value="ULB">Entire ULB Fleet</option>
@@ -486,7 +491,7 @@ export default function SchedulingPage() {
                   <label className="text-slate-400 block mb-1">Switching Mode</label>
                   <select
                     value={newMode}
-                    onChange={(e: any) => setNewMode(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setNewMode(e.target.value as 'ASTRONOMICAL' | 'FIXED'); }}
                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white text-xs focus:outline-none focus:border-amber-500"
                   >
                     <option value="ASTRONOMICAL">ASTRONOMICAL (Solar Ephemeris)</option>
@@ -503,7 +508,7 @@ export default function SchedulingPage() {
                       <input
                         type="number"
                         value={turnOnOffset}
-                        onChange={(e) => setTurnOnOffset(parseInt(e.target.value, 10))}
+                        onChange={(e) => { setTurnOnOffset(parseInt(e.target.value, 10)); }}
                         className="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-white text-xs focus:outline-none focus:border-amber-500"
                       />
                       <span className="text-slate-400">mins</span>
@@ -517,7 +522,7 @@ export default function SchedulingPage() {
                       <input
                         type="number"
                         value={turnOffOffset}
-                        onChange={(e) => setTurnOffOffset(parseInt(e.target.value, 10))}
+                        onChange={(e) => { setTurnOffOffset(parseInt(e.target.value, 10)); }}
                         className="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-white text-xs focus:outline-none focus:border-amber-500"
                       />
                       <span className="text-slate-400">mins</span>
@@ -532,7 +537,7 @@ export default function SchedulingPage() {
                     <input
                       type="time"
                       value={fixedOnTime}
-                      onChange={(e) => setFixedOnTime(e.target.value)}
+                      onChange={(e) => { setFixedOnTime(e.target.value); }}
                       className="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-white text-xs focus:outline-none focus:border-amber-500"
                     />
                   </div>
@@ -541,7 +546,7 @@ export default function SchedulingPage() {
                     <input
                       type="time"
                       value={fixedOffTime}
-                      onChange={(e) => setFixedOffTime(e.target.value)}
+                      onChange={(e) => { setFixedOffTime(e.target.value); }}
                       className="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-white text-xs focus:outline-none focus:border-amber-500"
                     />
                   </div>
@@ -555,7 +560,7 @@ export default function SchedulingPage() {
                   <input
                     type="checkbox"
                     checked={dimmingEnabled}
-                    onChange={(e) => setDimmingEnabled(e.target.checked)}
+                    onChange={(e) => { setDimmingEnabled(e.target.checked); }}
                     className="accent-amber-500 cursor-pointer"
                   />
                 </div>
@@ -567,7 +572,7 @@ export default function SchedulingPage() {
                       <input
                         type="time"
                         value={dimmingStartTime}
-                        onChange={(e) => setDimmingStartTime(e.target.value)}
+                        onChange={(e) => { setDimmingStartTime(e.target.value); }}
                         className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
                       />
                     </div>
@@ -576,7 +581,7 @@ export default function SchedulingPage() {
                       <input
                         type="time"
                         value={dimmingEndTime}
-                        onChange={(e) => setDimmingEndTime(e.target.value)}
+                        onChange={(e) => { setDimmingEndTime(e.target.value); }}
                         className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
                       />
                     </div>
@@ -584,7 +589,7 @@ export default function SchedulingPage() {
                       <span className="text-slate-400 block text-[10px]">Brightness</span>
                       <select
                         value={dimmingLevel}
-                        onChange={(e) => setDimmingLevel(parseInt(e.target.value, 10))}
+                        onChange={(e) => { setDimmingLevel(parseInt(e.target.value, 10)); }}
                         className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
                       >
                         <option value="40">40% Level</option>

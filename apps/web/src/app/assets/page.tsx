@@ -21,10 +21,55 @@ import {
 } from 'lucide-react';
 import { BulkImportResult } from '@smartlight/shared-types';
 
+interface AssetLuminaire {
+  wattage: number;
+  lamp_type?: string;
+}
+
+interface AssetPole {
+  id: string;
+  external_code: string;
+  height_meters?: number;
+  latitude?: number;
+  longitude?: number;
+  luminaires?: AssetLuminaire[];
+  luminaireWattage?: number;
+}
+
+interface AssetStreet {
+  id: string;
+  name: string;
+  street_type?: string;
+  poles?: AssetPole[];
+}
+
+interface AssetWard {
+  id: string;
+  ward_number: number;
+  name: string;
+  streets?: AssetStreet[];
+}
+
+interface AssetZone {
+  id: string;
+  name: string;
+  code: string;
+  wards?: AssetWard[];
+}
+
+interface AssetFeeder {
+  id: string;
+  name: string;
+  panel_code: string;
+  capacity_kw: number;
+  meter_number: string;
+  phase: string;
+}
+
 export default function AssetsPage() {
   const { selectedUlb } = useUlb();
-  const [hierarchy, setHierarchy] = useState<any[]>([]);
-  const [feeders, setFeeders] = useState<any[]>([]);
+  const [hierarchy, setHierarchy] = useState<AssetZone[]>([]);
+  const [feeders, setFeeders] = useState<AssetFeeder[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
@@ -65,8 +110,8 @@ export default function AssetsPage() {
     try {
       const ulbQuery = selectedUlb?.id ? `?ulbId=${selectedUlb.id}` : '';
       const [hData, fData] = await Promise.all([
-        ApiClient.fetch(`assets/hierarchy${ulbQuery}`),
-        ApiClient.fetch(`assets/feeders${ulbQuery}`),
+        ApiClient.fetch<AssetZone[]>(`assets/hierarchy${ulbQuery}`),
+        ApiClient.fetch<AssetFeeder[]>(`assets/feeders${ulbQuery}`),
       ]);
       setHierarchy(hData || []);
       setFeeders(fData || []);
@@ -74,9 +119,9 @@ export default function AssetsPage() {
       // Auto-expand top zones
       if (hData && Array.isArray(hData)) {
         const initialExpand: Record<string, boolean> = {};
-        hData.forEach((z: any) => {
+        hData.forEach((z: AssetZone) => {
           initialExpand[z.id] = true;
-          z.wards?.forEach((w: any) => {
+          z.wards?.forEach((w: AssetWard) => {
             initialExpand[w.id] = true;
           });
         });
@@ -135,7 +180,7 @@ export default function AssetsPage() {
   }, [selectedUlb]);
 
   useEffect(() => {
-    loadAssets();
+    void loadAssets();
   }, [loadAssets]);
 
   const toggleNode = (id: string) => {
@@ -146,15 +191,15 @@ export default function AssetsPage() {
   const totalZones = hierarchy.length;
   const totalWards = hierarchy.reduce((acc, z) => acc + (z.wards?.length || 0), 0);
   const totalStreets = hierarchy.reduce(
-    (acc, z) => acc + (z.wards?.reduce((wAcc: number, w: any) => wAcc + (w.streets?.length || 0), 0) || 0),
+    (acc, z) => acc + (z.wards?.reduce((wAcc: number, w: AssetWard) => wAcc + (w.streets?.length || 0), 0) || 0),
     0,
   );
   const totalPoles = hierarchy.reduce(
     (acc, z) =>
       acc +
       (z.wards?.reduce(
-        (wAcc: number, w: any) =>
-          wAcc + (w.streets?.reduce((sAcc: number, s: any) => sAcc + (s.poles?.length || 0), 0) || 0),
+        (wAcc: number, w: AssetWard) =>
+          wAcc + (w.streets?.reduce((sAcc: number, s: AssetStreet) => sAcc + (s.poles?.length || 0), 0) || 0),
         0,
       ) || 0),
     0,
@@ -183,9 +228,9 @@ export default function AssetsPage() {
         meterNumber: '',
         phase: '3-PHASE',
       });
-      loadAssets();
-    } catch (err: any) {
-      setActionError(err.message || 'Failed to create feeder');
+      void loadAssets();
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : 'Failed to create feeder');
     } finally {
       setSubmitting(false);
     }
@@ -224,9 +269,9 @@ export default function AssetsPage() {
         latitude: selectedUlb.code === 'ULB-GBL' ? 34.2165 : 32.9925,
         longitude: selectedUlb.code === 'ULB-GBL' ? 74.7725 : 74.9318,
       });
-      loadAssets();
-    } catch (err: any) {
-      setActionError(err.message || 'Failed to provision pole');
+      void loadAssets();
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : 'Failed to provision pole');
     } finally {
       setSubmitting(false);
     }
@@ -292,13 +337,13 @@ export default function AssetsPage() {
       setImportResult(res);
       if (res.success) {
         setActionSuccess(`Bulk import complete! ${res.importedCount} poles successfully provisioned.`);
-        loadAssets();
+        void loadAssets();
       } else {
         setActionError(`Import completed with ${res.failedCount} errors. ${res.importedCount} poles imported.`);
-        loadAssets();
+        void loadAssets();
       }
-    } catch (err: any) {
-      setActionError(err.message || 'Invalid JSON batch format');
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : 'Invalid JSON batch format');
     } finally {
       setSubmitting(false);
     }
@@ -363,7 +408,9 @@ export default function AssetsPage() {
           </button>
 
           <button
-            onClick={loadAssets}
+            onClick={() => {
+              void loadAssets();
+            }}
             disabled={loading}
             className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition-colors"
             title="Refresh assets"
@@ -382,7 +429,12 @@ export default function AssetsPage() {
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>{actionSuccess}</span>
           </div>
-          <button onClick={() => setActionSuccess(null)} className="text-emerald-400 hover:text-emerald-200">
+          <button
+            onClick={() => {
+              setActionSuccess(null);
+            }}
+            className="text-emerald-400 hover:text-emerald-200"
+          >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -394,7 +446,12 @@ export default function AssetsPage() {
             <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
             <span>{actionError}</span>
           </div>
-          <button onClick={() => setActionError(null)} className="text-red-400 hover:text-red-200">
+          <button
+            onClick={() => {
+              setActionError(null);
+            }}
+            className="text-red-400 hover:text-red-200"
+          >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -439,7 +496,9 @@ export default function AssetsPage() {
                 type="text"
                 placeholder="Search pole or street..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                }}
                 className="pl-8 pr-3 py-1 bg-slate-950 border border-slate-800 rounded text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 w-48"
               />
             </div>
@@ -457,7 +516,9 @@ export default function AssetsPage() {
                   <div key={zone.id} className="border border-slate-800 rounded-lg bg-slate-950/40 overflow-hidden">
                     {/* Zone Header */}
                     <button
-                      onClick={() => toggleNode(zone.id)}
+                      onClick={() => {
+                        toggleNode(zone.id);
+                      }}
                       className="w-full text-left px-3 py-2.5 bg-slate-900/60 hover:bg-slate-800/50 flex items-center justify-between border-b border-slate-800/80 transition-colors"
                     >
                       <div className="flex items-center gap-2 font-bold text-slate-200">
@@ -480,13 +541,15 @@ export default function AssetsPage() {
                     {/* Wards Container */}
                     {isZoneOpen && (
                       <div className="p-3 space-y-3">
-                        {zone.wards?.map((ward: any) => {
+                        {zone.wards?.map((ward: AssetWard) => {
                           const isWardOpen = expandedNodes[ward.id] ?? true;
                           return (
                             <div key={ward.id} className="border border-slate-800/60 rounded bg-slate-900/30 p-2.5">
                               {/* Ward Header */}
                               <button
-                                onClick={() => toggleNode(ward.id)}
+                                onClick={() => {
+                                  toggleNode(ward.id);
+                                }}
                                 className="w-full text-left flex items-center justify-between text-sky-400 font-semibold mb-2"
                               >
                                 <div className="flex items-center gap-1.5">
@@ -505,9 +568,9 @@ export default function AssetsPage() {
                               {/* Streets Container */}
                               {isWardOpen && (
                                 <div className="ml-4 space-y-3 border-l border-slate-800 pl-3">
-                                  {ward.streets?.map((street: any) => {
+                                  {ward.streets?.map((street: AssetStreet) => {
                                     const filteredPoles = (street.poles || []).filter(
-                                      (p: any) =>
+                                      (p: AssetPole) =>
                                         !searchQuery ||
                                         p.external_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                                         street.name?.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -529,7 +592,7 @@ export default function AssetsPage() {
 
                                         {/* Poles list */}
                                         <div className="mt-1.5 flex flex-wrap gap-2">
-                                          {filteredPoles.map((p: any, idx: number) => {
+                                          {filteredPoles.map((p: AssetPole, idx: number) => {
                                             const wattage = p.luminaires?.[0]?.wattage ?? p.luminaireWattage ?? 70;
                                             return (
                                               <div
@@ -626,7 +689,12 @@ export default function AssetsPage() {
                 <Zap className="w-4 h-4 text-emerald-400" />
                 Register CCMS Feeder Panel
               </h3>
-              <button onClick={() => setShowFeederModal(false)} className="text-slate-400 hover:text-white">
+              <button
+                onClick={() => {
+                  setShowFeederModal(false);
+                }}
+                className="text-slate-400 hover:text-white"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -638,7 +706,9 @@ export default function AssetsPage() {
                   type="text"
                   required
                   value={feederForm.panelCode}
-                  onChange={(e) => setFeederForm({ ...feederForm, panelCode: e.target.value })}
+                  onChange={(e) => {
+                    setFeederForm({ ...feederForm, panelCode: e.target.value });
+                  }}
                   placeholder="e.g. GBL-FP-03"
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded text-white focus:outline-none focus:border-emerald-400 font-mono"
                 />
@@ -650,7 +720,9 @@ export default function AssetsPage() {
                   type="text"
                   required
                   value={feederForm.name}
-                  onChange={(e) => setFeederForm({ ...feederForm, name: e.target.value })}
+                  onChange={(e) => {
+                    setFeederForm({ ...feederForm, name: e.target.value });
+                  }}
                   placeholder="e.g. Feeder Panel FP-03 North Corridor"
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded text-white focus:outline-none focus:border-emerald-400"
                 />
@@ -665,7 +737,9 @@ export default function AssetsPage() {
                     step="0.5"
                     required
                     value={feederForm.capacityKw}
-                    onChange={(e) => setFeederForm({ ...feederForm, capacityKw: Number(e.target.value) })}
+                    onChange={(e) => {
+                      setFeederForm({ ...feederForm, capacityKw: Number(e.target.value) });
+                    }}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded text-white focus:outline-none focus:border-emerald-400 font-mono"
                   />
                 </div>
@@ -674,7 +748,9 @@ export default function AssetsPage() {
                   <label className="block text-slate-300 font-medium mb-1">Electrical Phase</label>
                   <select
                     value={feederForm.phase}
-                    onChange={(e: any) => setFeederForm({ ...feederForm, phase: e.target.value })}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                      setFeederForm({ ...feederForm, phase: e.target.value as '3-PHASE' | 'SINGLE-PHASE' });
+                    }}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded text-white focus:outline-none focus:border-emerald-400"
                   >
                     <option value="3-PHASE">3-PHASE</option>
@@ -688,7 +764,9 @@ export default function AssetsPage() {
                 <input
                   type="text"
                   value={feederForm.meterNumber}
-                  onChange={(e) => setFeederForm({ ...feederForm, meterNumber: e.target.value })}
+                  onChange={(e) => {
+                    setFeederForm({ ...feederForm, meterNumber: e.target.value });
+                  }}
                   placeholder="e.g. JKPDD-MTR-99412"
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded text-white focus:outline-none focus:border-emerald-400 font-mono"
                 />
@@ -697,7 +775,9 @@ export default function AssetsPage() {
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setShowFeederModal(false)}
+                  onClick={() => {
+                    setShowFeederModal(false);
+                  }}
                   className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded"
                 >
                   Cancel
@@ -724,7 +804,12 @@ export default function AssetsPage() {
                 <MapPin className="w-4 h-4 text-amber-400" />
                 Provision Streetlight Pole & Luminaire
               </h3>
-              <button onClick={() => setShowPoleModal(false)} className="text-slate-400 hover:text-white">
+              <button
+                onClick={() => {
+                  setShowPoleModal(false);
+                }}
+                className="text-slate-400 hover:text-white"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -736,7 +821,9 @@ export default function AssetsPage() {
                   type="text"
                   required
                   value={poleForm.externalCode}
-                  onChange={(e) => setPoleForm({ ...poleForm, externalCode: e.target.value })}
+                  onChange={(e) => {
+                    setPoleForm({ ...poleForm, externalCode: e.target.value });
+                  }}
                   placeholder="e.g. GBL-POLE-101"
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded text-white focus:outline-none focus:border-amber-400 font-mono"
                 />
@@ -747,7 +834,9 @@ export default function AssetsPage() {
                   <label className="block text-slate-300 font-medium mb-1">Luminaire Wattage</label>
                   <select
                     value={poleForm.wattage}
-                    onChange={(e) => setPoleForm({ ...poleForm, wattage: Number(e.target.value) })}
+                    onChange={(e) => {
+                      setPoleForm({ ...poleForm, wattage: Number(e.target.value) });
+                    }}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded text-white focus:outline-none focus:border-amber-400 font-mono"
                   >
                     <option value={35}>35W (Residential)</option>
@@ -764,7 +853,9 @@ export default function AssetsPage() {
                     max="30"
                     step="0.5"
                     value={poleForm.heightMeters}
-                    onChange={(e) => setPoleForm({ ...poleForm, heightMeters: Number(e.target.value) })}
+                    onChange={(e) => {
+                      setPoleForm({ ...poleForm, heightMeters: Number(e.target.value) });
+                    }}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded text-white focus:outline-none focus:border-amber-400 font-mono"
                   />
                 </div>
@@ -774,7 +865,9 @@ export default function AssetsPage() {
                 <label className="block text-slate-300 font-medium mb-1">Associated Feeder Panel</label>
                 <select
                   value={poleForm.feederId}
-                  onChange={(e) => setPoleForm({ ...poleForm, feederId: e.target.value })}
+                  onChange={(e) => {
+                    setPoleForm({ ...poleForm, feederId: e.target.value });
+                  }}
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded text-white focus:outline-none focus:border-amber-400"
                 >
                   <option value="">-- Auto-Assign Feeder --</option>
@@ -794,7 +887,9 @@ export default function AssetsPage() {
                     step="0.0001"
                     required
                     value={poleForm.latitude}
-                    onChange={(e) => setPoleForm({ ...poleForm, latitude: Number(e.target.value) })}
+                    onChange={(e) => {
+                      setPoleForm({ ...poleForm, latitude: Number(e.target.value) });
+                    }}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded text-white focus:outline-none focus:border-amber-400 font-mono"
                   />
                 </div>
@@ -805,7 +900,9 @@ export default function AssetsPage() {
                     step="0.0001"
                     required
                     value={poleForm.longitude}
-                    onChange={(e) => setPoleForm({ ...poleForm, longitude: Number(e.target.value) })}
+                    onChange={(e) => {
+                      setPoleForm({ ...poleForm, longitude: Number(e.target.value) });
+                    }}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded text-white focus:outline-none focus:border-amber-400 font-mono"
                   />
                 </div>
@@ -814,7 +911,9 @@ export default function AssetsPage() {
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setShowPoleModal(false)}
+                  onClick={() => {
+                    setShowPoleModal(false);
+                  }}
                   className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded"
                 >
                   Cancel
@@ -841,7 +940,12 @@ export default function AssetsPage() {
                 <UploadCloud className="w-4 h-4 text-sky-400" />
                 Bulk Asset Import Engine
               </h3>
-              <button onClick={() => setShowImportModal(false)} className="text-slate-400 hover:text-white">
+              <button
+                onClick={() => {
+                  setShowImportModal(false);
+                }}
+                className="text-slate-400 hover:text-white"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -852,7 +956,9 @@ export default function AssetsPage() {
                   Target ULB: <strong className="text-white">{selectedUlb?.name}</strong>
                 </span>
                 <button
-                  onClick={handleLoadSampleBatch}
+                  onClick={() => {
+                    handleLoadSampleBatch();
+                  }}
                   className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded border border-slate-700 text-[11px]"
                 >
                   Load Sample Batch
@@ -862,7 +968,9 @@ export default function AssetsPage() {
               <textarea
                 rows={10}
                 value={importJson}
-                onChange={(e) => setImportJson(e.target.value)}
+                onChange={(e) => {
+                  setImportJson(e.target.value);
+                }}
                 placeholder="Paste JSON Batch with externalCode, wattage, latitude, longitude..."
                 className="w-full p-3 bg-slate-950 border border-slate-800 rounded text-slate-200 font-mono text-[11px] focus:outline-none focus:border-sky-400"
               />
@@ -899,14 +1007,18 @@ export default function AssetsPage() {
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setShowImportModal(false)}
+                  onClick={() => {
+                    setShowImportModal(false);
+                  }}
                   className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded"
                 >
                   Close
                 </button>
                 <button
                   type="submit"
-                  onClick={handleExecuteImport}
+                  onClick={() => {
+                    void handleExecuteImport();
+                  }}
                   disabled={submitting}
                   className="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-medium rounded transition-colors"
                 >

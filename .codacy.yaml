@@ -1,0 +1,6 @@
+---
+engines:
+  tsqllint:
+    enabled: false
+exclude_paths:
+  - 'pnpm-lock.yaml'

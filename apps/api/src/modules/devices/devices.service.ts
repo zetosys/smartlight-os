@@ -22,7 +22,7 @@ export class DevicesService {
       const luminaire = this.db.memoryStore.luminaires.find((l) => l.id === d.luminaire_id);
       const pole = luminaire ? this.db.memoryStore.poles.find((p) => p.id === luminaire.pole_id) : null;
       const feeder = this.db.memoryStore.feeders.find((f) => f.id === d.feeder_id);
-      const gateway = this.db.memoryStore.gateways.find((g) => g.id === (d.gateway_id || (d as any).gatewayId));
+      const gateway = this.db.memoryStore.gateways.find((g) => g.id === (d.gateway_id || d.gatewayId));
       const ulb = this.db.memoryStore.ulbs.find((u) => u.id === d.ulb_id);
 
       return {
@@ -31,7 +31,7 @@ export class DevicesService {
         lampType: luminaire?.lamp_type ?? 'LED',
         poleExternalCode: pole?.external_code ?? 'N/A',
         feederName: feeder?.name ?? 'N/A',
-        gatewayExternalCode: gateway?.external_code || (gateway as any)?.externalCode || 'GW-N/A',
+        gatewayExternalCode: gateway?.external_code || gateway?.externalCode || 'GW-N/A',
         ulbName: ulb?.name ?? 'N/A',
       };
     });

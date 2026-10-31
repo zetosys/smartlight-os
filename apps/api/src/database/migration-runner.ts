@@ -31,8 +31,8 @@ export async function runMigrations(): Promise<{ success: boolean; applied: stri
       .filter((f) => f.endsWith('.sql'))
       .sort();
 
-    const { rows } = await client.query('SELECT version FROM schema_migrations');
-    const appliedVersions = new Set(rows.map((r: any) => r.version));
+    const { rows } = await client.query<{ version: string }>('SELECT version FROM schema_migrations');
+    const appliedVersions = new Set(rows.map((r) => r.version));
 
     for (const file of files) {
       const version = file.split('_')[0];
@@ -42,7 +42,9 @@ export async function runMigrations(): Promise<{ success: boolean; applied: stri
       }
 
       console.log(`[MigrationRunner] Applying migration: ${file}...`);
-      const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+      const safeFile = path.basename(file);
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      const sql = fs.readFileSync(path.join(migrationsDir, safeFile), 'utf8');
 
       await client.query('BEGIN');
       try {
@@ -63,8 +65,9 @@ export async function runMigrations(): Promise<{ success: boolean; applied: stri
 
     console.log(`[MigrationRunner] All migrations processed. Applied ${applied.length} new migrations.`);
     return { success: true, applied };
-  } catch (err: any) {
-    console.error(`[MigrationRunner] Migration execution failed: ${err.message}`);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[MigrationRunner] Migration execution failed: ${msg}`);
     return { success: false, applied };
   } finally {
     await client.end().catch(() => {});
@@ -72,7 +75,7 @@ export async function runMigrations(): Promise<{ success: boolean; applied: stri
 }
 
 if (require.main === module) {
-  runMigrations().then((res) => {
+  void runMigrations().then((res) => {
     if (!res.success) {
       console.warn('[MigrationRunner] Note: If PostgreSQL is not currently running, ensure docker-compose is started:');
       console.warn('  docker compose -f infra/docker/docker-compose.yml up -d postgres');

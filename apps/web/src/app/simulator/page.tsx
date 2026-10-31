@@ -70,7 +70,7 @@ export default function SimulatorPage() {
   }, []);
 
   useEffect(() => {
-    fetchStatus();
+    void fetchStatus();
   }, [fetchStatus]);
 
   // Seed / Provision Full 4,608 Fleet
@@ -87,8 +87,9 @@ export default function SimulatorPage() {
       setActionMsg(
         `Full fleet of 4,608 streetlights successfully generated across Ganderbal (2,740) & Katra (1,868).`,
       );
-    } catch (err: any) {
-      setActionError(err.message || 'Failed to seed simulator fleet');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setActionError(msg || 'Failed to seed simulator fleet');
     } finally {
       setSubmitting(false);
     }
@@ -101,19 +102,20 @@ export default function SimulatorPage() {
     setActionError(null);
     try {
       if (simStatus?.isRunning) {
-        const data = await ApiClient.fetch('simulator/stop', { method: 'POST' });
+        const data = await ApiClient.fetch<SimulatorFleetStatus>('simulator/stop', { method: 'POST' });
         setSimStatus(data);
         setActionMsg('Background telemetry loop stopped. Virtual fleet idle.');
       } else {
-        const data = await ApiClient.fetch('simulator/start', {
+        const data = await ApiClient.fetch<SimulatorFleetStatus>('simulator/start', {
           method: 'POST',
           body: JSON.stringify({ intervalMs: 10000 }),
         });
         setSimStatus(data);
         setActionMsg('Background telemetry emission loop started (10s interval).');
       }
-    } catch (err: any) {
-      setActionError(err.message || 'Failed to toggle emission loop');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setActionError(msg || 'Failed to toggle emission loop');
     } finally {
       setSubmitting(false);
     }
@@ -135,15 +137,16 @@ export default function SimulatorPage() {
         method: 'POST',
         body: JSON.stringify({ sampleCount: 50 }),
       });
-      if (res.recentReadings) {
+      if (res.recentReadings.length > 0) {
         setRecentReadings(res.recentReadings);
       }
       setActionMsg(
         `Simulation clock advanced. Sampled ${res.sampleSize} devices, ingested ${res.ingested} readings (${res.anomaliesDetected} anomalies detected).`,
       );
-      fetchStatus();
-    } catch (err: any) {
-      setActionError(err.message || 'Failed to trigger tick');
+      void fetchStatus();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setActionError(msg || 'Failed to trigger tick');
     } finally {
       setSubmitting(false);
     }
@@ -157,7 +160,7 @@ export default function SimulatorPage() {
     setActionError(null);
 
     try {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         faultCode,
       };
 
@@ -236,7 +239,7 @@ export default function SimulatorPage() {
           </span>
 
           <button
-            onClick={handleToggleLoop}
+            onClick={() => { void handleToggleLoop(); }}
             disabled={submitting}
             className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1.5 transition-colors ${
               simStatus?.isRunning
@@ -256,7 +259,7 @@ export default function SimulatorPage() {
           </button>
 
           <button
-            onClick={handleTick}
+            onClick={() => { void handleTick(); }}
             disabled={submitting}
             className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded text-xs font-medium flex items-center gap-1.5 font-mono"
             title="Advance clock and ingest telemetry"
@@ -266,7 +269,7 @@ export default function SimulatorPage() {
           </button>
 
           <button
-            onClick={handleSeedFleet}
+            onClick={() => { void handleSeedFleet(); }}
             disabled={submitting}
             className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow-sm font-mono"
             title="Regenerate full 4,608 streetlight fleet"
@@ -276,7 +279,7 @@ export default function SimulatorPage() {
           </button>
 
           <button
-            onClick={fetchStatus}
+            onClick={() => { void fetchStatus(); }}
             disabled={loading}
             className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700"
             title="Refresh simulator status"
@@ -431,7 +434,7 @@ export default function SimulatorPage() {
               </h2>
               {simStatus?.activeFaults && simStatus.activeFaults.length > 0 && (
                 <button
-                  onClick={handleClearFaults}
+                  onClick={() => { void handleClearFaults(); }}
                   className="px-2.5 py-1 bg-red-950/60 hover:bg-red-900 text-red-300 border border-red-800/60 rounded text-xs"
                 >
                   Clear All Faults
@@ -439,7 +442,7 @@ export default function SimulatorPage() {
               )}
             </div>
 
-            <form onSubmit={handleInjectFault} className="space-y-4 text-xs font-mono">
+            <form onSubmit={(e) => { void handleInjectFault(e); }} className="space-y-4 text-xs font-mono">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-slate-300 font-sans font-medium mb-1">
@@ -447,7 +450,7 @@ export default function SimulatorPage() {
                   </label>
                   <select
                     value={faultCode}
-                    onChange={(e) => setFaultCode(e.target.value)}
+                    onChange={(e) => { setFaultCode(e.target.value); }}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded text-white focus:outline-none focus:border-red-400"
                   >
                     <option value="LAMP_FAILURE">LAMP_FAILURE (Burnout: 0W draw)</option>
@@ -465,7 +468,7 @@ export default function SimulatorPage() {
                   </label>
                   <select
                     value={faultPercentage}
-                    onChange={(e) => setFaultPercentage(Number(e.target.value))}
+                    onChange={(e) => { setFaultPercentage(Number(e.target.value)); }}
                     disabled={Boolean(targetDeviceId.trim())}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded text-white focus:outline-none focus:border-red-400 disabled:opacity-50"
                   >
@@ -483,7 +486,7 @@ export default function SimulatorPage() {
                   <input
                     type="text"
                     value={targetDeviceId}
-                    onChange={(e) => setTargetDeviceId(e.target.value)}
+                    onChange={(e) => { setTargetDeviceId(e.target.value); }}
                     placeholder="e.g. SIM-GBL-0001"
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded text-white focus:outline-none focus:border-red-400"
                   />

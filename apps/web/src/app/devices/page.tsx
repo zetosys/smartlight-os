@@ -7,9 +7,25 @@ import { generateClientSecureId } from '../../lib/crypto-id';
 import { SimulatedBadge, StatusBadge, StateComparison } from '@smartlight/ui';
 import { Cpu, Power, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
 
+interface DeviceControllerItem {
+  id: string;
+  external_id: string;
+  adapter_key: string;
+  desired_on: boolean;
+  reported_on: boolean;
+  is_online: boolean;
+  luminaireWattage?: number;
+  lampType?: string;
+  poleExternalCode?: string;
+  feederName?: string;
+  gatewayExternalCode?: string;
+  ulbName?: string;
+  simulated?: boolean;
+}
+
 export default function DevicesPage() {
   const { selectedUlb } = useUlb();
-  const [devices, setDevices] = useState<any[]>([]);
+  const [devices, setDevices] = useState<DeviceControllerItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [commandFeedback, setCommandFeedback] = useState<string | null>(null);
@@ -17,10 +33,10 @@ export default function DevicesPage() {
   const fetchDevices = async () => {
     setLoading(true);
     try {
-      const data = await ApiClient.fetch<{ items: any[] }>(
+      const data = await ApiClient.fetch<{ items: DeviceControllerItem[] }>(
         `devices?ulbId=${selectedUlb?.id || ''}&limit=50`,
       );
-      setDevices(data.items || []);
+      setDevices(data.items);
     } catch {
       // Fallback sample devices for UI testing
       setDevices([
@@ -73,7 +89,7 @@ export default function DevicesPage() {
   };
 
   useEffect(() => {
-    fetchDevices();
+    void fetchDevices();
   }, [selectedUlb]);
 
   const handleSendCommand = async (deviceId: string, externalId: string, type: 'TURN_ON' | 'TURN_OFF') => {
@@ -110,8 +126,9 @@ export default function DevicesPage() {
             : d,
         ),
       );
-    } catch (err: any) {
-      setCommandFeedback(`Command failed: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setCommandFeedback(`Command failed: ${msg}`);
     } finally {
       setActionLoading(null);
     }
@@ -135,7 +152,7 @@ export default function DevicesPage() {
         <div className="flex items-center gap-3">
           <SimulatedBadge />
           <button
-            onClick={fetchDevices}
+            onClick={() => { void fetchDevices(); }}
             disabled={loading}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs border border-slate-700 transition"
           >
@@ -210,14 +227,14 @@ export default function DevicesPage() {
                       <div className="flex items-center justify-end gap-1.5 font-sans">
                         <button
                           disabled={isWorking}
-                          onClick={() => handleSendCommand(device.id, device.external_id, 'TURN_ON')}
+                          onClick={() => { void handleSendCommand(device.id, device.external_id, 'TURN_ON'); }}
                           className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded text-xs border border-emerald-500/40 disabled:opacity-50"
                         >
                           ON
                         </button>
                         <button
                           disabled={isWorking}
-                          onClick={() => handleSendCommand(device.id, device.external_id, 'TURN_OFF')}
+                          onClick={() => { void handleSendCommand(device.id, device.external_id, 'TURN_OFF'); }}
                           className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs border border-slate-700 disabled:opacity-50"
                         >
                           OFF

@@ -79,10 +79,10 @@ export class SimulatorAdapter implements DeviceAdapter {
     if (!state) {
       // Auto-provision virtual state if absent
       this.initDevice(command.deviceId, 70, false);
-      state = this.deviceState.get(command.deviceId)!;
+      state = this.deviceState.get(command.deviceId);
     }
 
-    if (!state.online) {
+    if (!state || !state.online) {
       return {
         accepted: false,
         error: 'Device is offline in simulator layer',
@@ -113,11 +113,13 @@ export class SimulatorAdapter implements DeviceAdapter {
         // Acknowledged configuration commands
         break;
 
-      default:
+      default: {
+        const cmdType = String((command as { type?: unknown }).type);
         return {
           accepted: false,
-          error: `Unsupported command type: ${(command as any).type}`,
+          error: `Unsupported command type: ${cmdType}`,
         };
+      }
     }
 
     return {

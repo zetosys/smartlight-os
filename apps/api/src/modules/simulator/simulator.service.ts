@@ -74,7 +74,7 @@ export class SimulatorServiceModule implements OnModuleInit, OnModuleDestroy {
     const ktrDevs = devices.filter((d) => d.ulb_id === FLEET_SPEC.katra.id);
 
     const countWatts = (ulbId: string, w: number) => {
-      return luminaires.filter((l: any) => (l.ulb_id === ulbId || l.ulbId === ulbId) && l.wattage === w).length;
+      return luminaires.filter((l) => (l.ulb_id === ulbId || l.ulbId === ulbId) && l.wattage === w).length;
     };
 
     const gbl35 = countWatts(FLEET_SPEC.ganderbal.id, 35);

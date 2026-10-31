@@ -5,7 +5,7 @@ import { DeviceAdapter } from './types';
  * Ensures zero OEM/device-specific logic leaks into core business domains or UI.
  */
 export class AdapterRegistry {
-  private static instance: AdapterRegistry;
+  private static instance: AdapterRegistry | null = null;
   private readonly adapters: Map<string, DeviceAdapter> = new Map();
 
   private constructor() {}
