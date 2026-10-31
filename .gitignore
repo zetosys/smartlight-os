@@ -31,3 +31,8 @@ coverage/
 
 # Docker volumes / persistence
 pgdata/
+
+# Local Agent / MCP configurations (contains API keys)
+.agent/
+.agents/
+mcp_config.json
