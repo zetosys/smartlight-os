@@ -363,6 +363,37 @@ export class MaintenanceService {
     return this.getTicketById(id);
   }
 
+  public getAvailableTechnicians(ulbId?: string, user?: AuthContextUser): Array<{
+    id: string;
+    email: string;
+    name: string;
+    roleCode: string;
+    ulbId: string | null;
+    ulbName: string;
+  }> {
+    let users = this.db.memoryStore.users.filter(
+      (u) =>
+        (u.role_code === 'TECHNICIAN' || u.role_code === 'MAINTENANCE_SUPERVISOR') &&
+        u.active !== false,
+    );
+
+    if (ulbId) {
+      users = users.filter((u) => !u.ulb_id || u.ulb_id === ulbId);
+    }
+
+    return users.map((u) => {
+      const ulb = this.db.memoryStore.ulbs.find((item) => item.id === u.ulb_id);
+      return {
+        id: u.id,
+        email: u.email,
+        name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email,
+        roleCode: u.role_code,
+        ulbId: u.ulb_id,
+        ulbName: ulb?.name || 'All ULBs (Roaming)',
+      };
+    });
+  }
+
   // --- Spare Parts Catalog Operations ---
 
   public getSpareParts(): SparePart[] {

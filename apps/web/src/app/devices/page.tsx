@@ -177,8 +177,15 @@ export default function DevicesPage() {
                       <span>{device.external_id}</span>
                     </td>
                     <td className="px-4 py-3 text-slate-400">
-                      <div>{device.poleExternalCode}</div>
-                      <div className="text-[10px] text-slate-400 font-sans">{device.feederName}</div>
+                      <div className="font-mono text-white">{device.poleExternalCode}</div>
+                      <div className="text-[10px] text-slate-400 font-sans flex items-center gap-1.5 mt-0.5">
+                        <span>{device.feederName}</span>
+                        {device.gatewayExternalCode && (
+                          <span className="px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-mono text-[9px] border border-purple-500/30">
+                            {device.gatewayExternalCode}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-amber-400 font-bold">{device.luminaireWattage}W</span>

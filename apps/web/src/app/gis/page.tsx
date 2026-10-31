@@ -1,9 +1,20 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { useUlb } from '../../components/context/UlbContext';
 import { ApiClient } from '../../lib/api-client';
 import { SimulatedBadge, StateComparison } from '@smartlight/ui';
+
+const LeafletOsmMap = dynamic(() => import('./LeafletOsmMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 text-slate-400 gap-3">
+      <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+      <span className="font-mono text-xs text-slate-300">Loading Leaflet OpenStreetMap Engine...</span>
+    </div>
+  ),
+});
 import {
   MapPin,
   Layers,
@@ -64,6 +75,15 @@ export interface GisFeatureProperties {
   powerFactor?: number;
   temperatureC?: number;
   streetName?: string;
+  gatewayId?: string;
+  gatewayExternalCode?: string;
+  connectedDevicesCount?: number;
+  maxDevicesCapacity?: number;
+  protocol?: string;
+  backhaul?: string;
+  dutyCyclePct?: number;
+  rssiAvgDbm?: number;
+  snrAvgDb?: number;
 }
 
 export type GisFeature = GeoJsonFeature<GisFeatureProperties>;
@@ -85,6 +105,7 @@ export default function GisPage() {
   const [geoData, setGeoData] = useState<GisFeatureCollection | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [seedingFleet, setSeedingFleet] = useState<boolean>(false);
+  const [mapMode, setMapMode] = useState<'osm' | 'canvas'>('osm');
 
   // Layer & Visual Filter States
   const [selectedLayer, setSelectedLayer] = useState<'all' | 'poles' | 'feeders' | 'gateways' | 'zones'>('all');
@@ -92,6 +113,7 @@ export default function GisPage() {
   const [wattageFilter, setWattageFilter] = useState<'ALL' | '35' | '70' | '110'>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ON' | 'OFF' | 'FAULT' | 'OFFLINE'>('ALL');
   const [selectedFeederCircuit, setSelectedFeederCircuit] = useState<string>('ALL');
+  const [selectedGatewayCluster, setSelectedGatewayCluster] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Visualization Toggles
@@ -99,6 +121,7 @@ export default function GisPage() {
   const [showPhaseLines, setShowPhaseLines] = useState<boolean>(true);
   const [showZones, setShowZones] = useState<boolean>(true);
   const [showRoads, setShowRoads] = useState<boolean>(true);
+  const [showLoraLinks, setShowLoraLinks] = useState<boolean>(true);
 
   // Inspector & Modal States
   const [selectedFeature, setSelectedFeature] = useState<GisFeature | null>(null);
@@ -312,6 +335,25 @@ export default function GisPage() {
         if (statusFilter === 'OFFLINE' && f.properties.status !== 'comm_loss') return false;
       }
 
+      // LoRa Gateway 45-device cluster isolation
+      if (selectedGatewayCluster !== 'ALL') {
+        if (f.properties.assetType === 'POLE') {
+          if (
+            f.properties.gatewayExternalCode !== selectedGatewayCluster &&
+            f.properties.gatewayId !== selectedGatewayCluster
+          ) {
+            return false;
+          }
+        } else if (f.properties.assetType === 'GATEWAY') {
+          if (
+            f.properties.externalCode !== selectedGatewayCluster &&
+            f.id !== selectedGatewayCluster
+          ) {
+            return false;
+          }
+        }
+      }
+
       return true;
     });
   }, [
@@ -321,11 +363,13 @@ export default function GisPage() {
     wattageFilter,
     statusFilter,
     selectedFeederCircuit,
+    selectedGatewayCluster,
     showZones,
     searchQuery,
   ]);
 
   // Aggregated Category Counts
+  const allGateways = useMemo(() => geoData?.features.filter((f) => f.properties.assetType === 'GATEWAY') || [], [geoData]);
   const poles = useMemo(() => filteredFeatures.filter((f) => f.properties.assetType === 'POLE'), [filteredFeatures]);
   const feeders = useMemo(() => filteredFeatures.filter((f) => f.properties.assetType === 'FEEDER'), [filteredFeatures]);
   const gateways = useMemo(() => filteredFeatures.filter((f) => f.properties.assetType === 'GATEWAY'), [filteredFeatures]);
@@ -671,6 +715,34 @@ export default function GisPage() {
 
         {/* Global Toolbar Actions */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Map Engine View Switcher (Leaflet OSM vs SCADA Vector Canvas) */}
+          <div className="flex items-center bg-slate-950 border border-slate-700/80 rounded-lg p-0.5 font-mono text-xs shadow-inner">
+            <button
+              onClick={() => setMapMode('osm')}
+              className={`px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 ${
+                mapMode === 'osm'
+                  ? 'bg-amber-500 text-slate-950 shadow'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+              title="Interactive Leaflet OpenStreetMap view with dark, standard, and satellite base layers"
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              <span>OpenStreetMap</span>
+            </button>
+            <button
+              onClick={() => setMapMode('canvas')}
+              className={`px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 ${
+                mapMode === 'canvas'
+                  ? 'bg-amber-500 text-slate-950 shadow'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+              title="SCADA Vector Canvas schematic projection"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Vector Canvas</span>
+            </button>
+          </div>
+
           {poles.length < 500 && (
             <button
               onClick={handleSeedFullFleet}
@@ -725,6 +797,17 @@ export default function GisPage() {
           >
             <Compass className="w-3.5 h-3.5" />
             Zones
+          </button>
+
+          <button
+            onClick={() => setShowLoraLinks(!showLoraLinks)}
+            className={`px-2.5 py-1.5 rounded text-xs font-medium border transition-colors flex items-center gap-1.5 ${
+              showLoraLinks ? 'bg-purple-950/80 text-purple-300 border-purple-800/60' : 'bg-slate-800 text-slate-400 border-slate-700'
+            }`}
+            title="Toggle LoRa RF star topology (Gateway to 45 Luminaire Nodes)"
+          >
+            <Radio className="w-3.5 h-3.5" />
+            LoRa Links (45/GW)
           </button>
 
           <button
@@ -800,6 +883,25 @@ export default function GisPage() {
               {feeders.map((f) => (
                 <option key={f.id} value={f.properties.panelCode || f.id}>
                   {f.properties.panelCode || f.id} — {f.properties.name?.slice(0, 24)}...
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* LoRa Gateway (45-Device Cluster) Selector */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-400 font-medium flex items-center gap-1">
+              <Radio className="w-3.5 h-3.5 text-purple-400" /> LoRa GW:
+            </span>
+            <select
+              value={selectedGatewayCluster}
+              onChange={(e) => setSelectedGatewayCluster(e.target.value)}
+              className="bg-slate-950 border border-slate-800 text-purple-300 text-xs rounded px-2 py-1 font-mono focus:outline-none focus:border-purple-500 max-w-xs"
+            >
+              <option value="ALL">All LoRa Gateways ({allGateways.length || gateways.length})</option>
+              {(allGateways.length > 0 ? allGateways : gateways).map((gw) => (
+                <option key={gw.id} value={gw.properties.externalCode || gw.id}>
+                  {gw.properties.externalCode || gw.id} (45 Nodes)
                 </option>
               ))}
             </select>
@@ -925,9 +1027,30 @@ export default function GisPage() {
 
         {/* Map Canvas & Asset Inspector Container */}
         <div className="flex-1 flex overflow-hidden relative">
-          {/* Spatial Vector Canvas with Pan, Zoom & Wheel Support */}
-          <div
-            ref={svgContainerRef}
+          {mapMode === 'osm' ? (
+            <div className="flex-1 w-full h-full relative">
+              <LeafletOsmMap
+                features={filteredFeatures}
+                allFeatures={geoData?.features || []}
+                selectedFeature={selectedFeature}
+                onSelectFeature={setSelectedFeature}
+                onSwitchPole={handleToggleState}
+                onOpenWorkOrder={(feature) => {
+                  setSelectedFeature(feature);
+                  setShowWorkOrderModal(true);
+                }}
+                centerCoords={ulbCoords}
+                ulbCode={selectedUlb?.code}
+                showHalos={showHalos}
+                showPhaseLines={showPhaseLines}
+                showZones={showZones}
+                showLoraLinks={showLoraLinks}
+                actionPending={actionPending}
+              />
+            </div>
+          ) : (
+            <div
+              ref={svgContainerRef}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -1227,6 +1350,60 @@ export default function GisPage() {
                     );
                   })}
 
+                  {/* 4.5. Render LoRa Star-Topology Radio Beams (45 Nodes per Gateway) */}
+                  {showLoraLinks && (
+                    <g className="lora-star-topology pointer-events-none">
+                      {gateways
+                        .filter((gw) =>
+                          selectedFeature?.id === gw.id ||
+                          (selectedGatewayCluster !== 'ALL' &&
+                            (gw.properties.externalCode === selectedGatewayCluster || gw.id === selectedGatewayCluster))
+                        )
+                        .map((gw) => {
+                          const [gwLng, gwLat] = getPointCoords(gw.geometry);
+                          const gwPt = projectCoords(gwLng, gwLat);
+                          const connectedPoles = poles.filter(
+                            (p) =>
+                              p.properties.gatewayId === gw.id ||
+                              p.properties.gatewayExternalCode === gw.properties.externalCode,
+                          );
+
+                          return (
+                            <g key={`lora-cluster-${gw.id}`}>
+                              {/* 500m RF Coverage Aura Bubble */}
+                              <circle
+                                cx={gwPt.x}
+                                cy={gwPt.y}
+                                r="55"
+                                fill="#8b5cf6"
+                                fillOpacity="0.10"
+                                stroke="#a855f7"
+                                strokeWidth="1.2"
+                                strokeDasharray="3 3"
+                              />
+                              {connectedPoles.map((p) => {
+                                const [pLng, pLat] = getPointCoords(p.geometry);
+                                const pPt = projectCoords(pLng, pLat);
+                                return (
+                                  <line
+                                    key={`rf-link-${gw.id}-${p.id}`}
+                                    x1={gwPt.x}
+                                    y1={gwPt.y}
+                                    x2={pPt.x}
+                                    y2={pPt.y}
+                                    stroke="#c084fc"
+                                    strokeWidth="0.8"
+                                    strokeDasharray="2 2"
+                                    opacity="0.65"
+                                  />
+                                );
+                              })}
+                            </g>
+                          );
+                        })}
+                    </g>
+                  )}
+
                   {/* 5. Render LoRaWAN Gateways */}
                   {gateways.map((gw) => {
                     const [lng, lat] = getPointCoords(gw.geometry);
@@ -1380,6 +1557,7 @@ export default function GisPage() {
               </svg>
             )}
           </div>
+        )}
 
           {/* Right Slide-over: Spatial Asset Inspector */}
           {selectedFeature && (
@@ -1535,11 +1713,26 @@ export default function GisPage() {
                           {selectedFeature.properties.streetName || 'Municipal Route'}
                         </span>
                       </div>
-                      <div className="flex justify-between py-1">
+                      <div className="flex justify-between py-1 border-b border-slate-800">
                         <span className="text-slate-500">IoT Controller Node:</span>
                         <span className="font-mono text-sky-400">
-                          {selectedFeature.properties.deviceExternalId || 'SIM-DEV'}
+                          {selectedFeature.properties.deviceExternalId || 'SIM-DEV'} (LoRa Node)
                         </span>
+                      </div>
+                      <div className="flex justify-between py-1">
+                        <span className="text-slate-500">LoRa Gateway:</span>
+                        <button
+                          onClick={() => {
+                            if (selectedFeature.properties.gatewayExternalCode) {
+                              setSelectedGatewayCluster(selectedFeature.properties.gatewayExternalCode);
+                            }
+                          }}
+                          className="font-mono text-purple-400 hover:text-purple-300 font-semibold flex items-center gap-1 hover:underline text-xs"
+                          title="Click to isolate this gateway and its 45 connected lights"
+                        >
+                          <Radio className="w-3 h-3" />
+                          {selectedFeature.properties.gatewayExternalCode || 'GW-GBL-01'} (45 Nodes)
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1603,11 +1796,38 @@ export default function GisPage() {
                 {selectedFeature.properties.assetType === 'GATEWAY' && (
                   <div className="space-y-3.5 text-xs">
                     <div>
-                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Gateway Code</span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Gateway Code</span>
+                        <span className="px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-mono text-[10px] border border-purple-500/30">
+                          LoRa Micro-Gateway
+                        </span>
+                      </div>
                       <span className="font-mono text-base font-bold text-purple-400">
                         {selectedFeature.properties.externalCode}
                       </span>
                       <span className="text-xs text-slate-400 block mt-0.5">{selectedFeature.properties.name}</span>
+                    </div>
+
+                    {/* LoRa Device Cluster Capacity */}
+                    <div className="p-3 bg-slate-950 border border-slate-800 rounded space-y-2">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-400">LoRa Node Capacity:</span>
+                        <span className="font-mono font-bold text-white">
+                          <strong className="text-emerald-400">{selectedFeature.properties.connectedDevicesCount || 45}</strong> / 45 Nodes
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-purple-500 to-emerald-400 h-1.5 rounded-full"
+                          style={{
+                            width: `${Math.min(100, (((selectedFeature.properties.connectedDevicesCount || 45) / 45) * 100))}%`,
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                        <span>Cluster: 100% Filled</span>
+                        <span>SF7 / 865-867 MHz</span>
+                      </div>
                     </div>
 
                     <div className="p-2.5 bg-slate-950 border border-slate-800 rounded text-xs space-y-1.5 font-mono">
@@ -1616,14 +1836,32 @@ export default function GisPage() {
                         <span className="text-white">{selectedFeature.properties.ipAddress || '10.14.20.101'}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-400">Status:</span>
-                        <span className="text-emerald-400 font-bold">ONLINE</span>
+                        <span className="text-slate-400">4G Backhaul:</span>
+                        <span className="text-emerald-400 font-bold">LTE-M (Connected)</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-400">Protocol:</span>
-                        <span className="text-amber-400">LoRaWAN Class C / Cellular</span>
+                        <span className="text-slate-400">Duty Cycle:</span>
+                        <span className="text-sky-300">0.38% (&lt; 1% WPC SLA)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Avg RSSI / SNR:</span>
+                        <span className="text-amber-300">-74 dBm / +9.2 dB</span>
                       </div>
                     </div>
+
+                    {/* Cluster Isolation Button */}
+                    <button
+                      onClick={() => {
+                        const code = selectedFeature.properties.externalCode || selectedFeature.id;
+                        setSelectedGatewayCluster(selectedGatewayCluster === code ? 'ALL' : (code || 'ALL'));
+                      }}
+                      className="w-full py-2 bg-purple-950 hover:bg-purple-900 text-purple-200 border border-purple-800/80 rounded text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <Radio className="w-3.5 h-3.5 text-purple-400" />
+                      {selectedGatewayCluster === selectedFeature.properties.externalCode
+                        ? 'Clear Cluster Filter'
+                        : 'Isolate 45-Node Cluster On Canvas'}
+                    </button>
                   </div>
                 )}
               </div>

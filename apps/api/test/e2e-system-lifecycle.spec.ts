@@ -154,7 +154,7 @@ describe('SmartLight OS — Master End-to-End System Lifecycle', () => {
       expect(gblFeeders.length).toBe(35);
 
       const gblGateways = assetsService.getGateways(GBL_ULB);
-      expect(gblGateways.length).toBe(12);
+      expect(gblGateways.length).toBe(61);
 
       const gblZones = assetsService.getZones(GBL_ULB);
       expect(gblZones.length).toBe(3);
@@ -168,7 +168,7 @@ describe('SmartLight OS — Master End-to-End System Lifecycle', () => {
       expect(ktrFeeders.length).toBe(25);
 
       const ktrGateways = assetsService.getGateways(KTR_ULB);
-      expect(ktrGateways.length).toBe(8);
+      expect(ktrGateways.length).toBe(42);
 
       const ktrZones = assetsService.getZones(KTR_ULB);
       expect(ktrZones.length).toBe(2);
@@ -182,7 +182,7 @@ describe('SmartLight OS — Master End-to-End System Lifecycle', () => {
       expect(totalFeeders.length).toBe(60);
 
       const totalGateways = assetsService.getGateways();
-      expect(totalGateways.length).toBe(20);
+      expect(totalGateways.length).toBe(103);
     });
   });
 

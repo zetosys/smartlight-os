@@ -123,6 +123,20 @@ export default function UsersPage() {
           lastLoginAt: new Date(Date.now() - 172800000).toISOString(),
           createdAt: '2026-01-01T00:00:00Z',
         },
+        {
+          id: '40000000-0000-0000-0000-000000000010',
+          email: 'reports.viewer@smartlight.os',
+          name: 'Ramesh Kumar',
+          firstName: 'Ramesh',
+          lastName: 'Kumar',
+          roleCode: 'REPORTS_VIEWER',
+          ulbId: null,
+          ulbName: 'All ULBs (Global / Audit Board)',
+          mfaEnabled: false,
+          active: true,
+          lastLoginAt: new Date(Date.now() - 3600000).toISOString(),
+          createdAt: '2026-01-01T00:00:00Z',
+        },
       ]);
     } finally {
       setLoading(false);
@@ -174,6 +188,10 @@ export default function UsersPage() {
           roleCode: 'AUDITOR',
           permissions: ['assets.read', 'devices.read', 'reports.read', 'reports.export', 'audit.read'],
         },
+        {
+          roleCode: 'REPORTS_VIEWER',
+          permissions: ['reports.read', 'reports.export'],
+        },
       ]);
     }
   };
@@ -196,7 +214,7 @@ export default function UsersPage() {
           firstName: formFirstName,
           lastName: formLastName,
           roleCode: formRole,
-          ulbId: formRole === 'PLATFORM_ADMIN' || formRole === 'AUDITOR' ? null : formUlbId,
+          ulbId: formRole === 'PLATFORM_ADMIN' || formRole === 'AUDITOR' || formRole === 'REPORTS_VIEWER' ? null : formUlbId,
           mfaEnabled: formMfa,
         }),
       });
@@ -436,6 +454,7 @@ export default function UsersPage() {
                   <th className="px-3 py-3 text-center">MAINT_SUP</th>
                   <th className="px-3 py-3 text-center">TECHNICIAN</th>
                   <th className="px-3 py-3 text-center">AUDITOR</th>
+                  <th className="px-3 py-3 text-center text-amber-400">REPORTS_VIEWER</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
@@ -462,7 +481,7 @@ export default function UsersPage() {
                 ].map((perm) => (
                   <tr key={perm} className="hover:bg-slate-800/30">
                     <td className="px-4 py-2 font-bold text-slate-300">{perm}</td>
-                    {['PLATFORM_ADMIN', 'ULB_ADMIN', 'OPERATIONS_MANAGER', 'CONTROL_OPERATOR', 'MAINTENANCE_SUPERVISOR', 'TECHNICIAN', 'AUDITOR'].map((role) => {
+                    {['PLATFORM_ADMIN', 'ULB_ADMIN', 'OPERATIONS_MANAGER', 'CONTROL_OPERATOR', 'MAINTENANCE_SUPERVISOR', 'TECHNICIAN', 'AUDITOR', 'REPORTS_VIEWER'].map((role) => {
                       const roleObj = roleMatrix.find((r) => r.roleCode === role);
                       const has = roleObj?.permissions.includes(perm as PermissionCode);
                       return (
@@ -741,13 +760,14 @@ export default function UsersPage() {
                     <option value="MAINTENANCE_SUPERVISOR">MAINTENANCE_SUPERVISOR</option>
                     <option value="TECHNICIAN">TECHNICIAN</option>
                     <option value="AUDITOR">AUDITOR</option>
+                    <option value="REPORTS_VIEWER">REPORTS_VIEWER (Reports Only)</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="text-slate-400 block mb-1">Assigned ULB Scope</label>
                   <select
-                    disabled={formRole === 'PLATFORM_ADMIN' || formRole === 'AUDITOR'}
+                    disabled={formRole === 'PLATFORM_ADMIN' || formRole === 'AUDITOR' || formRole === 'REPORTS_VIEWER'}
                     className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-amber-500 disabled:opacity-50"
                     value={formUlbId}
                     onChange={(e) => setFormUlbId(e.target.value)}

@@ -75,6 +75,27 @@ describe('IoT Fleet Generator & Electrical Physics Engine (Prompt 3)', () => {
     expect(Math.abs(phaseY - phaseB)).toBeLessThanOrEqual(2);
   });
 
+  it('allocates 103 LoRa gateways with each gateway supporting up to 45 devices', () => {
+    const fleet = generateFleet(365);
+    expect(fleet.gateways.length).toBe(103); // 61 in Ganderbal, 42 in Katra
+
+    const gblGateways = fleet.gateways.filter((g) => g.ulbId === FLEET_SPEC.ganderbal.id);
+    const ktrGateways = fleet.gateways.filter((g) => g.ulbId === FLEET_SPEC.katra.id);
+    expect(gblGateways.length).toBe(61);
+    expect(ktrGateways.length).toBe(42);
+
+    // Verify each gateway connects <= 45 devices
+    const deviceCountsByGw: Record<string, number> = {};
+    for (const d of fleet.devices) {
+      deviceCountsByGw[d.gateway_id] = (deviceCountsByGw[d.gateway_id] || 0) + 1;
+    }
+
+    for (const [gwId, count] of Object.entries(deviceCountsByGw)) {
+      expect(count).toBeLessThanOrEqual(45);
+      expect(count).toBeGreaterThan(0);
+    }
+  });
+
   describe('Electrical Physics & Fault Telemetry Generation', () => {
     const rng = new DeterministicRng(100);
 

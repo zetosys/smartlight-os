@@ -5,7 +5,8 @@ export type UserRole =
   | 'CONTROL_OPERATOR'
   | 'MAINTENANCE_SUPERVISOR'
   | 'TECHNICIAN'
-  | 'AUDITOR';
+  | 'AUDITOR'
+  | 'REPORTS_VIEWER';
 
 export type PermissionCode =
   | 'org.manage'
@@ -112,6 +113,10 @@ export const ROLE_PERMISSIONS_MAP: Record<UserRole, PermissionCode[]> = {
     'reports.read',
     'reports.export',
     'audit.read',
+  ],
+  REPORTS_VIEWER: [
+    'reports.read',
+    'reports.export',
   ],
 };
 

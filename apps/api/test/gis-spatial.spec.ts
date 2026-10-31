@@ -61,13 +61,13 @@ describe('GIS Spatial Network & Fleet Topology Operations', () => {
       expect(ktrFeeders.features.every((f) => f.properties.assetType === 'FEEDER')).toBe(true);
     });
 
-    it('generates LoRaWAN gateways (12 in Ganderbal, 8 in Katra)', () => {
+    it('generates LoRaWAN gateways (61 in Ganderbal, 42 in Katra @ max 45 devices/GW)', () => {
       const gblGateways = assetsService.getGeoJson(GBL_ULB, 'gateways');
-      expect(gblGateways.features.length).toBe(12);
+      expect(gblGateways.features.length).toBe(61);
       expect(gblGateways.features.every((f) => f.properties.assetType === 'GATEWAY')).toBe(true);
 
       const ktrGateways = assetsService.getGeoJson(KTR_ULB, 'gateways');
-      expect(ktrGateways.features.length).toBe(8);
+      expect(ktrGateways.features.length).toBe(42);
       expect(ktrGateways.features.every((f) => f.properties.assetType === 'GATEWAY')).toBe(true);
     });
 
@@ -90,7 +90,7 @@ describe('GIS Spatial Network & Fleet Topology Operations', () => {
 
     it('filters by combined layers using comma-separated selector', () => {
       const feederAndGw = assetsService.getGeoJson(GBL_ULB, 'feeders,gateways');
-      expect(feederAndGw.features.length).toBe(35 + 12); // 35 feeders + 12 gateways = 47 features
+      expect(feederAndGw.features.length).toBe(35 + 61); // 35 feeders + 61 gateways = 96 features
       expect(feederAndGw.features.some((f) => f.properties.assetType === 'FEEDER')).toBe(true);
       expect(feederAndGw.features.some((f) => f.properties.assetType === 'GATEWAY')).toBe(true);
       expect(feederAndGw.features.some((f) => f.properties.assetType === 'POLE')).toBe(false);

@@ -34,7 +34,7 @@ export interface SeedAccountOption {
   isGlobalAdmin: boolean;
   title?: string;
   department?: string;
-  portalView?: 'platform' | 'admin' | 'operator' | 'technician' | 'auditor';
+  portalView?: 'platform' | 'admin' | 'operator' | 'technician' | 'auditor' | 'reports';
 }
 
 export const SEED_ACCOUNTS: SeedAccountOption[] = [
@@ -119,6 +119,16 @@ export const SEED_ACCOUNTS: SeedAccountOption[] = [
     portalView: 'technician',
   },
   {
+    email: 'tech.katra@smartlight.os',
+    name: 'Rakesh Gupta',
+    role: 'TECHNICIAN',
+    allowedUlbIds: ['22222222-2222-2222-2222-222222222222'],
+    isGlobalAdmin: false,
+    title: 'Senior Field Technician',
+    department: 'Katra Pilgrim Corridor Mobile Team',
+    portalView: 'technician',
+  },
+  {
     email: 'auditor@smartlight.os',
     name: 'Sunil Verma',
     role: 'AUDITOR',
@@ -127,6 +137,16 @@ export const SEED_ACCOUNTS: SeedAccountOption[] = [
     title: 'Third-Party Energy & SLA Auditor',
     department: 'Independent Compliance Verification Agency',
     portalView: 'auditor',
+  },
+  {
+    email: 'reports.viewer@smartlight.os',
+    name: 'Ramesh Kumar',
+    role: 'REPORTS_VIEWER',
+    allowedUlbIds: ['*'],
+    isGlobalAdmin: false,
+    title: 'Executive Tender Monitor & SLA Officer',
+    department: 'State Directorate of Urban Local Bodies / Audit Board',
+    portalView: 'reports',
   },
 ];
 

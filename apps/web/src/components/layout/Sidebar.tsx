@@ -19,7 +19,9 @@ import {
   Settings,
   Sparkles,
   X,
+  Lock,
 } from 'lucide-react';
+import { useUlb } from '../context/UlbContext';
 
 interface NavItem {
   label: string;
@@ -53,9 +55,17 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
   const pathname = usePathname();
+  const { currentUser } = useUlb();
+  const isReportsViewer = currentUser?.role === 'REPORTS_VIEWER';
+  const MUTATING_ROUTES = ['/controls', '/scheduling', '/simulator', '/users', '/maintenance', '/settings'];
 
   // Only close sidebar on link click if on mobile screens (< 768px)
-  const handleLinkClick = () => {
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (isReportsViewer && MUTATING_ROUTES.includes(href)) {
+      e.preventDefault();
+      alert("🔒 Access Restricted: The REPORTS_VIEWER role has strictly read-only reporting access. Operational controls and mutations are blocked under RBAC policy.");
+      return;
+    }
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       onClose?.();
     }
@@ -105,8 +115,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
 
           {/* Section Header (Full Mode Only) */}
           {isOpen && (
-            <div className="px-3 py-1.5 text-[10px] uppercase font-mono tracking-wider text-slate-400 font-semibold hidden md:block">
-              Operations Management
+            <div className="px-3 py-1.5 flex items-center justify-between text-[10px] uppercase font-mono tracking-wider text-slate-400 font-semibold hidden md:flex">
+              <span>{isReportsViewer ? 'Reports & SLA Hub' : 'Operations Management'}</span>
+              {isReportsViewer && (
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 font-mono font-bold">
+                  READ-ONLY
+                </span>
+              )}
             </div>
           )}
 
@@ -114,37 +129,64 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href || (item.href === '/dashboard' && pathname === '/');
             const Icon = item.icon;
+            const isLocked = isReportsViewer && MUTATING_ROUTES.includes(item.href);
+
+            let displayBadge = item.badge;
+            let displayBadgeColor = item.badgeColor;
+
+            if (isReportsViewer) {
+              if (isLocked) {
+                displayBadge = 'LOCK';
+                displayBadgeColor = 'bg-rose-500/20 text-rose-300 border border-rose-500/30';
+              } else if (item.href === '/reports') {
+                displayBadge = 'PRIMARY';
+                displayBadgeColor = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold';
+              } else if (item.href === '/portal') {
+                displayBadge = 'REPORTS';
+                displayBadgeColor = 'bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold';
+              }
+            }
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={handleLinkClick}
+                onClick={(e) => handleLinkClick(e, item.href)}
                 className={`flex items-center ${
                   isOpen ? 'justify-between px-3 py-2.5' : 'justify-center p-2.5'
                 } rounded-lg text-xs font-medium transition-all group relative ${
-                  isActive
+                  isLocked
+                    ? 'opacity-40 hover:opacity-75 cursor-not-allowed text-slate-400 hover:bg-slate-800/40'
+                    : isActive
                     ? 'bg-amber-500/15 text-amber-400 font-semibold border border-amber-500/30 shadow-sm'
                     : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/80'
                 }`}
               >
                 <div className={`flex items-center ${isOpen ? 'gap-3 min-w-0' : 'justify-center'}`}>
-                  <Icon
-                    className={`w-4 h-4 shrink-0 transition-colors ${
-                      isActive ? 'text-amber-400' : 'text-slate-400 group-hover:text-slate-200'
-                    }`}
-                  />
-                  {isOpen && <span className="truncate">{item.label}</span>}
+                  {isLocked ? (
+                    <Lock className="w-4 h-4 shrink-0 text-slate-500 group-hover:text-rose-400" />
+                  ) : (
+                    <Icon
+                      className={`w-4 h-4 shrink-0 transition-colors ${
+                        isActive ? 'text-amber-400' : 'text-slate-400 group-hover:text-slate-200'
+                      }`}
+                    />
+                  )}
+                  {isOpen && (
+                    <span className={`truncate ${isLocked ? 'text-slate-400 group-hover:text-slate-300' : ''}`}>
+                      {item.label}
+                    </span>
+                  )}
                 </div>
 
                 {/* Badge in Open Mode */}
-                {isOpen && item.badge && (
+                {isOpen && displayBadge && (
                   <span
                     className={`px-1.5 py-0.2 text-[10px] font-mono rounded font-semibold shrink-0 ml-2 ${
-                      item.badgeColor || 'bg-slate-800 text-slate-300'
+                      displayBadgeColor || 'bg-slate-800 text-slate-300'
                     }`}
                   >
-                    {item.badge}
+                    {displayBadge}
                   </span>
                 )}
 
@@ -152,9 +194,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
                 {!isOpen && (
                   <div className="absolute left-full ml-3 px-2.5 py-1.5 rounded-md bg-slate-900 border border-slate-700 text-xs font-medium text-white whitespace-nowrap shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 flex items-center gap-2">
                     <span>{item.label}</span>
-                    {item.badge && (
-                      <span className={`px-1 py-0.2 text-[9px] font-mono rounded ${item.badgeColor || 'bg-slate-800'}`}>
-                        {item.badge}
+                    {displayBadge && (
+                      <span className={`px-1 py-0.2 text-[9px] font-mono rounded ${displayBadgeColor || 'bg-slate-800'}`}>
+                        {displayBadge}
                       </span>
                     )}
                   </div>

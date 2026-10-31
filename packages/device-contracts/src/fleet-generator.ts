@@ -54,7 +54,7 @@ export const FLEET_SPEC = {
     count110W: 339,
     total: 2740,
     feederCount: 35,
-    gatewayCount: 12,
+    gatewayCount: 61, // Max 45 LoRa devices per gateway (2740 / 45 = 60.88 -> 61 gateways)
   },
   katra: {
     id: '22222222-2222-2222-2222-222222222222',
@@ -67,7 +67,7 @@ export const FLEET_SPEC = {
     count110W: 123,
     total: 1868,
     feederCount: 25,
-    gatewayCount: 8,
+    gatewayCount: 42, // Max 45 LoRa devices per gateway (1868 / 45 = 41.51 -> 42 gateways)
   },
 };
 
@@ -189,18 +189,21 @@ export function generateFleet(seed: number = 365): GeneratedFleet {
     feeders.push(feeder);
   }
 
-  // Gateways for Ganderbal (12 gateways)
+  // Gateways for Ganderbal (61 gateways, max 45 LoRa devices per gateway)
   const gblGateways: Gateway[] = [];
   for (let g = 1; g <= gbl.gatewayCount; g++) {
     const gwId = `gw-gbl-${String(g).padStart(2, '0')}`;
-    const fdr = gblFeeders[(g - 1) * 2];
+    const fdr = gblFeeders[(g - 1) % gbl.feederCount];
+    const gwCoord = genCoord(fdr.location!.latitude, fdr.location!.longitude, 0.002, 0.003);
     const gw: Gateway = {
       id: gwId,
       ulbId: gbl.id,
       feederId: fdr.id,
       externalCode: `GW-GBL-${String(g).padStart(2, '0')}`,
-      name: `CCMS Gateway GW-${String(g).padStart(2, '0')}`,
+      name: `LoRa Concentrator GW-${String(g).padStart(2, '0')} (${fdr.panelCode})`,
       ipAddress: `10.14.20.${100 + g}`,
+      protocol: 'LORA_CLASS_C',
+      location: { latitude: gwCoord.lat, longitude: gwCoord.lng },
       isOnline: true,
       createdAt: nowIso,
     };
@@ -225,7 +228,9 @@ export function generateFleet(seed: number = 365): GeneratedFleet {
     const wattage = gblWattages[i];
 
     const feeder = gblFeeders[i % gbl.feederCount];
-    const gateway = gblGateways[i % gbl.gatewayCount];
+    // Each gateway connects up to 45 LoRa devices
+    const gatewayIdx = Math.min(gbl.gatewayCount - 1, Math.floor(i / 45));
+    const gateway = gblGateways[gatewayIdx];
     const street =
       wattage === 110
         ? gblStreets[0]
@@ -359,18 +364,21 @@ export function generateFleet(seed: number = 365): GeneratedFleet {
     feeders.push(feeder);
   }
 
-  // Gateways for Katra (8 gateways)
+  // Gateways for Katra (42 gateways, max 45 LoRa devices per gateway)
   const ktrGateways: Gateway[] = [];
   for (let g = 1; g <= ktr.gatewayCount; g++) {
     const gwId = `gw-ktr-${String(g).padStart(2, '0')}`;
-    const fdr = ktrFeeders[(g - 1) * 3];
+    const fdr = ktrFeeders[(g - 1) % ktr.feederCount];
+    const gwCoord = genCoord(fdr.location!.latitude, fdr.location!.longitude, 0.002, 0.002);
     const gw: Gateway = {
       id: gwId,
       ulbId: ktr.id,
       feederId: fdr.id,
       externalCode: `GW-KTR-${String(g).padStart(2, '0')}`,
-      name: `CCMS Gateway GW-${String(g).padStart(2, '0')}`,
+      name: `LoRa Concentrator GW-${String(g).padStart(2, '0')} (${fdr.panelCode})`,
       ipAddress: `10.14.30.${100 + g}`,
+      protocol: 'LORA_CLASS_C',
+      location: { latitude: gwCoord.lat, longitude: gwCoord.lng },
       isOnline: true,
       createdAt: nowIso,
     };
@@ -393,7 +401,9 @@ export function generateFleet(seed: number = 365): GeneratedFleet {
     const wattage = ktrWattages[i];
 
     const feeder = ktrFeeders[i % ktr.feederCount];
-    const gateway = ktrGateways[i % ktr.gatewayCount];
+    // Each gateway connects up to 45 LoRa devices
+    const gatewayIdx = Math.min(ktr.gatewayCount - 1, Math.floor(i / 45));
+    const gateway = ktrGateways[gatewayIdx];
     const street =
       wattage === 110
         ? ktrStreets[0]

@@ -123,6 +123,15 @@ export class MaintenanceController {
     return this.maintenanceService.assignTicket(id, assignedTo, user);
   }
 
+  @Get('maintenance/technicians')
+  @RequirePermissions('tickets.read')
+  getAvailableTechnicians(
+    @Query('ulbId') ulbId?: string,
+    @CurrentUser() user?: AuthContextUser,
+  ) {
+    return this.maintenanceService.getAvailableTechnicians(ulbId, user);
+  }
+
   @Post('tickets/:id/status')
   @RequirePermissions('tickets.resolve')
   updateTicketStatus(

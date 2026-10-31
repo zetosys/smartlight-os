@@ -229,6 +229,16 @@ describe('Prompt 6: Fault Detection, Alerts Engine & Maintenance Workflows', () 
         /belongs to a different ULB/,
       );
     });
+
+    it('retrieves available site engineers scoped to the ULB', () => {
+      const gblTechs = maintenanceService.getAvailableTechnicians('11111111-1111-1111-1111-111111111111');
+      expect(gblTechs.length).toBeGreaterThanOrEqual(1);
+      expect(gblTechs.some((t) => t.email === 'tech.ganderbal@smartlight.os')).toBe(true);
+
+      const ktrTechs = maintenanceService.getAvailableTechnicians('22222222-2222-2222-2222-222222222222');
+      expect(ktrTechs.length).toBeGreaterThanOrEqual(1);
+      expect(ktrTechs.some((t) => t.email === 'tech.katra@smartlight.os')).toBe(true);
+    });
   });
 
   describe('Spare Parts Catalog & Inventory Management', () => {

@@ -7,6 +7,8 @@ import { SimulatedBadge } from '@smartlight/ui';
 import {
   Wrench,
   User,
+  UserCheck,
+  ShieldCheck,
   CheckCircle2,
   AlertTriangle,
   RotateCw,
@@ -26,11 +28,21 @@ import {
   SparePart,
 } from '@smartlight/shared-types';
 
+interface SiteEngineer {
+  id: string;
+  email: string;
+  name: string;
+  roleCode: string;
+  ulbId: string | null;
+  ulbName: string;
+}
+
 export default function MaintenancePage() {
   const { selectedUlb, currentUser } = useUlb();
 
   const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
+  const [technicians, setTechnicians] = useState<SiteEngineer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -41,6 +53,11 @@ export default function MaintenancePage() {
   const [newPriority, setNewPriority] = useState<TicketPriority>('MEDIUM');
   const [newDeviceId, setNewDeviceId] = useState<string>('');
   const [newAssignedTo, setNewAssignedTo] = useState<string>('');
+
+  // Assign Ticket Modal State
+  const [assignModalOpen, setAssignModalOpen] = useState<boolean>(false);
+  const [assigningTicket, setAssigningTicket] = useState<MaintenanceTicket | null>(null);
+  const [selectedTechId, setSelectedTechId] = useState<string>('');
 
   // Resolve Ticket Modal State
   const [resolvingTicket, setResolvingTicket] = useState<MaintenanceTicket | null>(null);
@@ -71,6 +88,33 @@ export default function MaintenancePage() {
         setSpareParts(parts);
         setSelectedPartId(parts[0].id);
       }
+
+      // 3. Fetch site engineers / technicians for this ULB
+      const techs = await ApiClient.fetch<SiteEngineer[]>(`maintenance/technicians?ulbId=${selectedUlb.id}`);
+      if (techs && techs.length > 0) {
+        setTechnicians(techs);
+        setSelectedTechId(techs[0].id);
+      } else {
+        const fallbackTech: SiteEngineer = selectedUlb.code === 'ULB-GBL'
+          ? {
+              id: '40000000-0000-0000-0000-000000000004',
+              name: 'Mohammad Iqbal',
+              email: 'tech.ganderbal@smartlight.os',
+              roleCode: 'TECHNICIAN',
+              ulbId: selectedUlb.id,
+              ulbName: selectedUlb.name,
+            }
+          : {
+              id: '40000000-0000-0000-0000-000000000011',
+              name: 'Rakesh Gupta',
+              email: 'tech.katra@smartlight.os',
+              roleCode: 'TECHNICIAN',
+              ulbId: selectedUlb.id,
+              ulbName: selectedUlb.name,
+            };
+        setTechnicians([fallbackTech]);
+        setSelectedTechId(fallbackTech.id);
+      }
     } catch {
       // Fallback
       setTickets([
@@ -81,11 +125,30 @@ export default function MaintenancePage() {
           description: 'Verify optical isolation and controller power input',
           priority: 'MEDIUM',
           status: 'OPEN',
-          assignedToName: 'Mohammad Iqbal (Field Tech)',
+          assignedToName: selectedUlb.code === 'ULB-GBL' ? 'Mohammad Iqbal (Field Tech)' : 'Rakesh Gupta (Field Tech)',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
       ]);
+      const fallbackTech: SiteEngineer = selectedUlb.code === 'ULB-GBL'
+        ? {
+            id: '40000000-0000-0000-0000-000000000004',
+            name: 'Mohammad Iqbal',
+            email: 'tech.ganderbal@smartlight.os',
+            roleCode: 'TECHNICIAN',
+            ulbId: selectedUlb.id,
+            ulbName: selectedUlb.name,
+          }
+        : {
+            id: '40000000-0000-0000-0000-000000000011',
+            name: 'Rakesh Gupta',
+            email: 'tech.katra@smartlight.os',
+            roleCode: 'TECHNICIAN',
+            ulbId: selectedUlb.id,
+            ulbName: selectedUlb.name,
+          };
+      setTechnicians([fallbackTech]);
+      setSelectedTechId(fallbackTech.id);
     } finally {
       setLoading(false);
     }
@@ -119,6 +182,41 @@ export default function MaintenancePage() {
       setTimeout(() => setNotification(null), 3000);
     } catch (err: any) {
       setNotification(`Failed to create ticket: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openAssignModal = (ticket: MaintenanceTicket) => {
+    setAssigningTicket(ticket);
+    if (ticket.assignedTo && technicians.some((t) => t.id === ticket.assignedTo)) {
+      setSelectedTechId(ticket.assignedTo);
+    } else if (technicians.length > 0) {
+      setSelectedTechId(technicians[0].id);
+    }
+    setAssignModalOpen(true);
+  };
+
+  const handleAssignTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!assigningTicket || !selectedTechId) return;
+
+    setIsSubmitting(true);
+    try {
+      const updated = await ApiClient.fetch<MaintenanceTicket>(`tickets/${assigningTicket.id}/assign`, {
+        method: 'POST',
+        body: JSON.stringify({ assignedTo: selectedTechId }),
+      });
+
+      setTickets((prev) => prev.map((t) => (t.id === assigningTicket.id ? updated : t)));
+
+      const techObj = technicians.find((t) => t.id === selectedTechId);
+      setNotification(`Work order '${assigningTicket.title}' assigned to ${techObj?.name || 'Site Engineer'}. Field repair dispatched!`);
+      setAssignModalOpen(false);
+      setAssigningTicket(null);
+      setTimeout(() => setNotification(null), 4000);
+    } catch (err: any) {
+      setNotification(`Failed to assign work order: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -297,9 +395,23 @@ export default function MaintenancePage() {
                         <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono">
                           <span className="flex items-center gap-1.5 text-slate-300">
                             <User className="w-3.5 h-3.5 text-amber-400" />
-                            {t.assignedToName || 'Unassigned'}
+                            <span className={t.assignedToName ? 'text-slate-200' : 'text-amber-400/80 italic'}>
+                              {t.assignedToName || 'Unassigned'}
+                            </span>
                           </span>
-                          <span className="text-amber-400 font-bold">{t.deviceCode || t.deviceId || 'ULB'}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-amber-400 font-bold">{t.deviceCode || t.deviceId || 'ULB'}</span>
+                            {t.status !== 'RESOLVED' && (
+                              <button
+                                onClick={() => openAssignModal(t)}
+                                className="px-2 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[10px] font-mono flex items-center gap-1 transition"
+                                title="Assign or reassign site engineer"
+                              >
+                                <UserCheck className="w-3 h-3 text-amber-400" />
+                                <span>{t.assignedTo ? 'Reassign' : 'Assign'}</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Spare Parts Badge if any */}
@@ -312,7 +424,17 @@ export default function MaintenancePage() {
 
                         {/* Advance Action Buttons */}
                         <div className="pt-2 border-t border-slate-800/60 flex items-center gap-2">
-                          {t.status === 'OPEN' && (
+                          {t.status === 'OPEN' && !t.assignedTo && (
+                            <button
+                              onClick={() => openAssignModal(t)}
+                              className="w-full py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded text-[11px] font-bold flex items-center justify-center gap-1.5 transition"
+                            >
+                              <UserCheck className="w-3.5 h-3.5" />
+                              <span>Assign Site Engineer</span>
+                            </button>
+                          )}
+
+                          {t.status === 'OPEN' && t.assignedTo && (
                             <button
                               onClick={() => handleAdvanceStatus(t, 'IN_PROGRESS')}
                               className="w-full py-1.5 bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/40 rounded text-[11px] font-bold flex items-center justify-center gap-1.5 transition"
@@ -401,6 +523,22 @@ export default function MaintenancePage() {
               </div>
 
               <div>
+                <label className="text-slate-400 block mb-1 font-sans">Assign Site Engineer (Field Technician)</label>
+                <select
+                  value={newAssignedTo}
+                  onChange={(e) => setNewAssignedTo(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white text-xs focus:outline-none focus:border-amber-500 font-mono"
+                >
+                  <option value="">Unassigned (Queue in Dispatch)</option>
+                  {technicians.map((tech) => (
+                    <option key={tech.id} value={tech.id}>
+                      {tech.name} ({tech.roleCode === 'MAINTENANCE_SUPERVISOR' ? 'Supervisor' : 'Site Engineer'}) — {tech.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <label className="text-slate-400 block mb-1">Detailed Fault &amp; Repair Instructions</label>
                 <textarea
                   rows={3}
@@ -425,6 +563,95 @@ export default function MaintenancePage() {
                   className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded text-xs transition disabled:opacity-50"
                 >
                   {isSubmitting ? 'Dispatching...' : 'Dispatch Work Order'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Work Order Modal */}
+      {assignModalOpen && assigningTicket && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-amber-500/40 rounded-xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="font-bold text-white text-base flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-amber-400" />
+                Assign Work Order to Site Engineer
+              </h3>
+              <button onClick={() => setAssignModalOpen(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            {/* Ticket overview info */}
+            <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-lg text-xs space-y-1.5 font-mono">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-white font-sans text-xs">{assigningTicket.title}</span>
+                <span className="px-2 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  {assigningTicket.priority}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-slate-400 text-[11px]">
+                <span>Asset: <strong className="text-amber-400">{assigningTicket.deviceCode || assigningTicket.deviceId}</strong></span>
+                <span>Current Status: <span className="text-slate-300">{assigningTicket.status}</span></span>
+              </div>
+              {assigningTicket.description && (
+                <div className="text-slate-400 font-sans text-[11px] pt-1 border-t border-slate-800/80">
+                  {assigningTicket.description}
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleAssignTicket} className="space-y-4 text-xs font-sans">
+              <div>
+                <label className="text-slate-300 block mb-1 font-semibold flex items-center justify-between">
+                  <span>Select Qualified Site Engineer</span>
+                  <span className="text-[10px] text-slate-500 font-mono">Scope: {selectedUlb?.name}</span>
+                </label>
+                <select
+                  value={selectedTechId}
+                  onChange={(e) => setSelectedTechId(e.target.value)}
+                  required
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white text-xs focus:outline-none focus:border-amber-500 font-mono"
+                >
+                  {technicians.map((tech) => (
+                    <option key={tech.id} value={tech.id}>
+                      {tech.name} ({tech.roleCode === 'MAINTENANCE_SUPERVISOR' ? 'Maintenance Supervisor' : 'Field Technician'}) — {tech.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="p-3 bg-slate-950/50 border border-slate-800 rounded-lg text-[11px] text-slate-400 space-y-1">
+                <div className="font-semibold text-slate-300 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  Tenancy &amp; Dispatch Rules
+                </div>
+                <p>
+                  • Assignment automatically transitions ticket status from <code className="text-amber-300">OPEN</code> to <code className="text-sky-300">FIELD REPAIR IN PROGRESS</code>.
+                </p>
+                <p>
+                  • Dispatches ticket directly to the engineer&apos;s mobile field portal for resolution and spare parts sign-off.
+                </p>
+                <p>
+                  • ULB boundary verification prevents cross-dispatching engineers outside {selectedUlb?.code}.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setAssignModalOpen(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !selectedTechId}
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded text-xs transition flex items-center gap-1.5 shadow-md disabled:opacity-50"
+                >
+                  <UserCheck className="w-3.5 h-3.5" />
+                  {isSubmitting ? 'Dispatching...' : 'Confirm & Dispatch Work Order'}
                 </button>
               </div>
             </form>

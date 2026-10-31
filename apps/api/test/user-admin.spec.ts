@@ -110,10 +110,17 @@ describe('Prompt 1 — Scoped User Administration & RBAC Enforcement', () => {
 
   it('returns complete role permissions matrix matching tender specifications', () => {
     const matrix = usersService.getRolePermissionsMatrix();
-    expect(matrix.length).toBe(7);
+    expect(matrix.length).toBe(8);
     const adminRole = matrix.find((m) => m.roleCode === 'PLATFORM_ADMIN');
     expect(adminRole?.permissions).toContain('org.manage');
     expect(adminRole?.permissions).toContain('users.manage');
     expect(adminRole?.permissions).toContain('devices.command');
+
+    const reportsViewerRole = matrix.find((m) => m.roleCode === 'REPORTS_VIEWER');
+    expect(reportsViewerRole).toBeDefined();
+    expect(reportsViewerRole?.permissions).toEqual(['reports.read', 'reports.export']);
+    expect(reportsViewerRole?.permissions).not.toContain('devices.command');
+    expect(reportsViewerRole?.permissions).not.toContain('assets.write');
+    expect(reportsViewerRole?.permissions).not.toContain('users.manage');
   });
 });
