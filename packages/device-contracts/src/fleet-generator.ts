@@ -225,22 +225,24 @@ export function generateFleet(seed: number = 365): GeneratedFleet {
     const poleId = `pole-gbl-${indexStr}`;
     const lumId = `lum-gbl-${indexStr}`;
     const devId = `dev-gbl-${indexStr}`;
-    const wattage = gblWattages[i];
+    const wattage = gblWattages.at(i) ?? 70;
 
-    const feeder = gblFeeders[i % gbl.feederCount];
+    const feeder = gblFeeders.at(i % gbl.feederCount) ?? gblFeeders[0];
     // Each gateway connects up to 45 LoRa devices
     const gatewayIdx = Math.min(gbl.gatewayCount - 1, Math.floor(i / 45));
-    const gateway = gblGateways[gatewayIdx];
+    const gateway = gblGateways.at(gatewayIdx) ?? gblGateways[0];
+    const defaultStreet = gblStreets[0];
     const street =
       wattage === 110
-        ? gblStreets[0]
+        ? defaultStreet
         : wattage === 70
-        ? gblStreets[(i % 12) * 2]
-        : gblStreets[(i % 12) * 2 + 1];
+        ? (gblStreets.at((i % 12) * 2) ?? defaultStreet)
+        : (gblStreets.at((i % 12) * 2 + 1) ?? defaultStreet);
 
-    const coord = genCoord(feeder.location!.latitude, feeder.location!.longitude, 0.006, 0.008);
+    const fdrLoc = feeder.location ?? { latitude: 34.2165, longitude: 74.7725 };
+    const coord = genCoord(fdrLoc.latitude, fdrLoc.longitude, 0.006, 0.008);
     const height = wattage === 110 ? 10.0 : wattage === 70 ? 8.5 : 7.0;
-    const phaseConn = phases[i % 3];
+    const phaseConn = phases.at(i % 3) ?? 'R';
 
     const isOnline = rng.next() > 0.015;
     const reportedOn = isOnline ? rng.next() > 0.15 : false;
@@ -398,22 +400,24 @@ export function generateFleet(seed: number = 365): GeneratedFleet {
     const poleId = `pole-ktr-${indexStr}`;
     const lumId = `lum-ktr-${indexStr}`;
     const devId = `dev-ktr-${indexStr}`;
-    const wattage = ktrWattages[i];
+    const wattage = ktrWattages.at(i) ?? 70;
 
-    const feeder = ktrFeeders[i % ktr.feederCount];
+    const feeder = ktrFeeders.at(i % ktr.feederCount) ?? ktrFeeders[0];
     // Each gateway connects up to 45 LoRa devices
     const gatewayIdx = Math.min(ktr.gatewayCount - 1, Math.floor(i / 45));
-    const gateway = ktrGateways[gatewayIdx];
+    const gateway = ktrGateways.at(gatewayIdx) ?? ktrGateways[0];
+    const defaultStreet = ktrStreets[0];
     const street =
       wattage === 110
-        ? ktrStreets[0]
+        ? defaultStreet
         : wattage === 70
-        ? ktrStreets[(i % 8) * 2]
-        : ktrStreets[(i % 8) * 2 + 1];
+        ? (ktrStreets.at((i % 8) * 2) ?? defaultStreet)
+        : (ktrStreets.at((i % 8) * 2 + 1) ?? defaultStreet);
 
-    const coord = genCoord(feeder.location!.latitude, feeder.location!.longitude, 0.005, 0.006);
+    const fdrLoc = feeder.location ?? { latitude: 32.9925, longitude: 74.9318 };
+    const coord = genCoord(fdrLoc.latitude, fdrLoc.longitude, 0.005, 0.006);
     const height = wattage === 110 ? 10.0 : wattage === 70 ? 8.5 : 7.0;
-    const phaseConn = phases[i % 3];
+    const phaseConn = phases.at(i % 3) ?? 'R';
 
     const isOnline = rng.next() > 0.015;
     const reportedOn = isOnline ? rng.next() > 0.15 : false;

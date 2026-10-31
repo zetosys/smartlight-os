@@ -73,6 +73,142 @@ export interface MemoryDevice {
   updated_at?: string;
 }
 
+export interface MemoryCommand {
+  id: string;
+  ulb_id?: string;
+  device_id: string;
+  requested_by?: string;
+  command_type: string;
+  payload: Record<string, unknown>;
+  idempotency_key?: string;
+  status: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface MemoryCommandAttempt {
+  id: string;
+  command_id: string;
+  status: string;
+  attempt_number: number;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export interface MemoryAlert {
+  id: string;
+  ulb_id: string;
+  device_id: string;
+  code: string;
+  message: string;
+  severity: string;
+  status: string;
+  opened_at: string;
+  acknowledged_at?: string;
+  resolved_at?: string;
+  [key: string]: unknown;
+}
+
+export interface MemoryTicket {
+  id: string;
+  ulb_id: string;
+  alert_id?: string;
+  device_id?: string;
+  assigned_to?: string;
+  assigned_to_name?: string;
+  title: string;
+  description: string;
+  priority: string;
+  status: string;
+  created_at: string;
+  updated_at?: string;
+  resolved_at?: string;
+  [key: string]: unknown;
+}
+
+export interface MemorySchedule {
+  id: string;
+  ulb_id: string;
+  name: string;
+  scope: string;
+  target_id?: string | null;
+  timezone: string;
+  enabled: boolean;
+  rule: Record<string, unknown>;
+  created_at: string;
+  updated_at?: string;
+  [key: string]: unknown;
+}
+
+export interface MemoryUser {
+  id: string;
+  email: string;
+  password?: string;
+  first_name: string;
+  last_name: string;
+  role_code: string;
+  ulb_id: string | null;
+  active: boolean;
+  mfa_enabled: boolean;
+  mfa_secret: string | null;
+  mfa_method: string;
+  last_login_at: string;
+  created_at: string;
+}
+
+export interface MemorySparePart {
+  id: string;
+  code: string;
+  name: string;
+  category: string;
+  quantity_in_stock: number;
+  unit_cost_inr: number;
+}
+
+export interface MemorySession {
+  id: string;
+  user_id: string;
+  token_hash: string;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  mfa_verified: boolean;
+  created_at: string;
+  expires_at: string;
+  revoked_at?: string | null;
+}
+
+export interface MemoryAuditLog {
+  id: string;
+  ulb_id: string | null;
+  actor_id: string | null;
+  actor_email?: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  details: Record<string, unknown>;
+  occurred_at: string;
+}
+
+export interface MemoryRollup {
+  id?: string;
+  ulb_id: string;
+  bucket_start: string;
+  energy_kwh: number;
+  avg_power_factor: number;
+  uptime_percentage: number;
+  alert_count: number;
+  peak_load_kw: number;
+}
+
+function getProp<T>(obj: unknown, key1: string, key2?: string, fallback?: T): T {
+  if (typeof obj === 'object' && obj !== null) {
+    const rec = obj as Record<string, unknown>;
+    if (rec[key1] !== undefined) return rec[key1] as T;
+    if (key2 && rec[key2] !== undefined) return rec[key2] as T;
+  }
+  return fallback as T;
+}
+
 @Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DatabaseService.name);
@@ -226,8 +362,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         simulated: true,
       },
     ] as MemoryDevice[],
-    commands: [] as any[],
-    attempts: [] as any[],
+    commands: [] as MemoryCommand[],
+    attempts: [] as MemoryCommandAttempt[],
     alerts: [
       {
         id: 'c0000000-0000-0000-0000-000000000001',
@@ -240,7 +376,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         opened_at: new Date(Date.now() - 3600000).toISOString(),
         acknowledged_at: undefined as string | undefined,
       },
-    ] as any[],
+    ] as MemoryAlert[],
     tickets: [
       {
         id: 'd0000000-0000-0000-0000-000000000001',
@@ -253,7 +389,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         status: 'OPEN',
         created_at: new Date().toISOString(),
       },
-    ] as any[],
+    ] as MemoryTicket[],
     schedules: [
       {
         id: 'sched-gbl-01',
@@ -291,7 +427,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         },
         created_at: new Date().toISOString(),
       },
-    ] as any[],
+    ] as MemorySchedule[],
     users: [
       {
         id: '40000000-0000-0000-0000-000000000001',
@@ -458,12 +594,12 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         last_login_at: new Date(Date.now() - 43200000).toISOString(),
         created_at: '2026-01-01T00:00:00Z',
       },
-    ] as Array<Record<string, unknown>>,
-    sessions: [] as Array<Record<string, unknown>>,
-    auditLogs: [] as Array<Record<string, unknown>>,
+    ] as MemoryUser[],
+    sessions: [] as MemorySession[],
+    auditLogs: [] as MemoryAuditLog[],
     telemetry: [] as Array<Record<string, unknown>>,
-    hourlyRollups: [] as Array<Record<string, unknown>>,
-    dailyRollups: [] as Array<Record<string, unknown>>,
+    hourlyRollups: [] as MemoryRollup[],
+    dailyRollups: [] as MemoryRollup[],
     spareParts: [
       { id: 'part-1', code: 'PART-LED-35W', name: '35W High-Efficiency LED Modular Luminaire', category: 'LUMINAIRE', quantity_in_stock: 120, unit_cost_inr: 2400 },
       { id: 'part-2', code: 'PART-LED-70W', name: '70W High-Efficiency LED Modular Luminaire', category: 'LUMINAIRE', quantity_in_stock: 150, unit_cost_inr: 3800 },
@@ -472,7 +608,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       { id: 'part-5', code: 'PART-DRV-100W', name: 'Constant-Current Dimmable LED Driver 100W', category: 'DRIVER', quantity_in_stock: 140, unit_cost_inr: 1450 },
       { id: 'part-6', code: 'PART-CON-63A', name: 'CCMS Contactor 63A 3-Phase 4-Pole', category: 'SWITCHGEAR', quantity_in_stock: 60, unit_cost_inr: 2100 },
       { id: 'part-7', code: 'PART-FUSE-32A', name: 'Phase Protection Fast-Blow Fuse 32A', category: 'PROTECTION', quantity_in_stock: 300, unit_cost_inr: 180 },
-    ] as any[],
+    ] as MemorySparePart[],
   };
 
   public seedHistoricalRollups() {
@@ -560,93 +696,130 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   public seedFullFleet(seed: number = 365) {
     const fleet = generateFleet(seed);
 
-    this.memoryStore.zones = fleet.zones.map((z) => ({
-      ...z,
-      code: z.code || 'ZONE',
-      ulb_id: (z as any).ulb_id || z.ulbId,
-      ulbId: z.ulbId || (z as any).ulb_id,
-    }));
+    this.memoryStore.zones = fleet.zones.map((z) => {
+      const ulbId = getProp<string>(z, 'ulb_id', 'ulbId', '');
+      return {
+        ...z,
+        code: z.code || 'ZONE',
+        ulb_id: ulbId,
+        ulbId,
+      };
+    });
 
-    this.memoryStore.wards = fleet.wards.map((w) => ({
-      ...w,
-      zone_id: (w as any).zone_id || w.zoneId,
-      zoneId: w.zoneId || (w as any).zone_id,
-      ulb_id: (w as any).ulb_id || w.ulbId,
-      ulbId: w.ulbId || (w as any).ulb_id,
-      ward_number: (w as any).ward_number || w.wardNumber,
-      wardNumber: w.wardNumber || (w as any).ward_number,
-    }));
+    this.memoryStore.wards = fleet.wards.map((w) => {
+      const zoneId = getProp<string>(w, 'zone_id', 'zoneId', '');
+      const ulbId = getProp<string>(w, 'ulb_id', 'ulbId', '');
+      const wardNumber = getProp<number>(w, 'ward_number', 'wardNumber', 1);
+      return {
+        ...w,
+        zone_id: zoneId,
+        zoneId,
+        ulb_id: ulbId,
+        ulbId,
+        ward_number: wardNumber,
+        wardNumber,
+      };
+    });
 
-    this.memoryStore.streets = fleet.streets.map((s) => ({
-      ...s,
-      ward_id: (s as any).ward_id || s.wardId,
-      wardId: s.wardId || (s as any).ward_id,
-      street_type: (s as any).street_type || s.type,
-      type: s.type || (s as any).street_type,
-    }));
+    this.memoryStore.streets = fleet.streets.map((s) => {
+      const wardId = getProp<string>(s, 'ward_id', 'wardId', '');
+      const streetType = getProp<string>(s, 'street_type', 'type', 'LOCAL');
+      return {
+        ...s,
+        ward_id: wardId,
+        wardId,
+        street_type: streetType,
+        type: streetType,
+      };
+    });
 
-    this.memoryStore.feeders = fleet.feeders.map((f) => ({
-      ...f,
-      ulb_id: (f as any).ulb_id || f.ulbId,
-      ulbId: f.ulbId || (f as any).ulb_id,
-      panel_code: (f as any).panel_code || f.panelCode,
-      panelCode: f.panelCode || (f as any).panel_code,
-      capacity_kw: (f as any).capacity_kw || f.capacityKw,
-      capacityKw: f.capacityKw || (f as any).capacity_kw,
-      meter_number: (f as any).meter_number || f.meterNumber,
-      meterNumber: f.meterNumber || (f as any).meter_number,
-      location: f.location || {
-        latitude: (f as any).latitude || 34.2165,
-        longitude: (f as any).longitude || 74.7725,
-      },
-    }));
+    this.memoryStore.feeders = fleet.feeders.map((f) => {
+      const ulbId = getProp<string>(f, 'ulb_id', 'ulbId', '');
+      const panelCode = getProp<string>(f, 'panel_code', 'panelCode', '');
+      const capacityKw = getProp<number>(f, 'capacity_kw', 'capacityKw', 25);
+      const meterNumber = getProp<string>(f, 'meter_number', 'meterNumber', 'UNMETERED');
+      const loc = f.location || {
+        latitude: getProp<number>(f, 'latitude', undefined, 34.2165),
+        longitude: getProp<number>(f, 'longitude', undefined, 74.7725),
+      };
+      return {
+        ...f,
+        ulb_id: ulbId,
+        ulbId,
+        panel_code: panelCode,
+        panelCode,
+        capacity_kw: capacityKw,
+        capacityKw,
+        meter_number: meterNumber,
+        meterNumber,
+        location: loc,
+      };
+    });
 
-    this.memoryStore.gateways = fleet.gateways.map((g) => ({
-      ...g,
-      ulb_id: (g as any).ulb_id || g.ulbId,
-      ulbId: g.ulbId || (g as any).ulb_id,
-      feeder_id: (g as any).feeder_id || g.feederId,
-      feederId: g.feederId || (g as any).feeder_id,
-      external_code: (g as any).external_code || g.externalCode,
-      externalCode: g.externalCode || (g as any).external_code,
-      ip_address: (g as any).ip_address || g.ipAddress,
-      ipAddress: g.ipAddress || (g as any).ip_address,
-      is_online: (g as any).is_online !== undefined ? (g as any).is_online : g.isOnline,
-      isOnline: g.isOnline !== undefined ? g.isOnline : (g as any).is_online,
-    }));
+    this.memoryStore.gateways = fleet.gateways.map((g) => {
+      const ulbId = getProp<string>(g, 'ulb_id', 'ulbId', '');
+      const feederId = getProp<string>(g, 'feeder_id', 'feederId', '');
+      const externalCode = getProp<string>(g, 'external_code', 'externalCode', '');
+      const ipAddress = getProp<string>(g, 'ip_address', 'ipAddress', '');
+      const isOnline = getProp<boolean>(g, 'is_online', 'isOnline', true);
+      return {
+        ...g,
+        ulb_id: ulbId,
+        ulbId,
+        feeder_id: feederId,
+        feederId,
+        external_code: externalCode,
+        externalCode,
+        ip_address: ipAddress,
+        ipAddress,
+        is_online: isOnline,
+        isOnline,
+      };
+    });
 
     this.memoryStore.poles = fleet.poles.map((p) => {
-      const lat = p.location?.latitude || (p as any).latitude || 34.2165;
-      const lng = p.location?.longitude || (p as any).longitude || 74.7725;
+      const lat = p.location?.latitude || getProp<number>(p, 'latitude', undefined, 34.2165);
+      const lng = p.location?.longitude || getProp<number>(p, 'longitude', undefined, 74.7725);
+      const ulbId = getProp<string>(p, 'ulb_id', 'ulbId', '');
+      const streetId = getProp<string>(p, 'street_id', 'streetId', '');
+      const externalCode = getProp<string>(p, 'external_code', 'externalCode', '');
+      const heightMeters = getProp<number>(p, 'height_meters', 'heightMeters', 8.5);
       return {
         ...p,
-        ulb_id: (p as any).ulb_id || p.ulbId,
-        ulbId: p.ulbId || (p as any).ulb_id,
-        street_id: (p as any).street_id || p.streetId,
-        streetId: p.streetId || (p as any).street_id,
-        external_code: (p as any).external_code || p.externalCode,
-        externalCode: p.externalCode || (p as any).external_code,
-        height_meters: (p as any).height_meters || p.heightMeters,
-        heightMeters: p.heightMeters || (p as any).height_meters,
+        ulb_id: ulbId,
+        ulbId,
+        street_id: streetId,
+        streetId,
+        external_code: externalCode,
+        externalCode,
+        height_meters: heightMeters,
+        heightMeters,
         latitude: lat,
         longitude: lng,
         location: { latitude: lat, longitude: lng },
       };
     });
 
-    this.memoryStore.luminaires = fleet.luminaires.map((l) => ({
-      ...l,
-      ulb_id: (l as any).ulb_id || l.ulbId,
-      ulbId: l.ulbId || (l as any).ulb_id,
-      pole_id: (l as any).pole_id || l.poleId,
-      poleId: l.poleId || (l as any).pole_id,
-      feeder_id: (l as any).feeder_id || l.feederId,
-      feederId: l.feederId || (l as any).feeder_id,
-      lamp_type: (l as any).lamp_type || l.lampType,
-      lampType: l.lampType || (l as any).lamp_type,
-      phase_connection: (l as any).phase_connection || l.phaseConnection,
-      phaseConnection: l.phaseConnection || (l as any).phase_connection,
-    }));
+    this.memoryStore.luminaires = fleet.luminaires.map((l) => {
+      const ulbId = getProp<string>(l, 'ulb_id', 'ulbId', '');
+      const poleId = getProp<string>(l, 'pole_id', 'poleId', '');
+      const feederId = getProp<string>(l, 'feeder_id', 'feederId', '');
+      const lampType = getProp<string>(l, 'lamp_type', 'lampType', 'LED');
+      const phaseConnection = getProp<'R' | 'Y' | 'B'>(l, 'phase_connection', 'phaseConnection', 'R');
+      return {
+        ...l,
+        ulb_id: ulbId,
+        ulbId,
+        pole_id: poleId,
+        poleId,
+        feeder_id: feederId,
+        feederId,
+        lamp_type: lampType,
+        lampType,
+        phase_connection: phaseConnection,
+        phaseConnection,
+      };
+    });
 
     this.memoryStore.devices = fleet.devices.map((d) => ({
       ...d,
@@ -691,7 +864,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       client.release();
       this.isConnected = true;
       this.logger.log('Connected to PostgreSQL successfully');
-    } catch (err: any) {
+    } catch (_err: unknown) {
       this.isConnected = false;
       this.logger.warn(
         `PostgreSQL not reachable at ${connectionString}. Operating in resilient memory-store mode for development/tests.`,

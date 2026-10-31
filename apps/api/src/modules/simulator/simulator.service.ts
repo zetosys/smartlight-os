@@ -61,8 +61,8 @@ export class SimulatorServiceModule implements OnModuleInit, OnModuleDestroy {
     for (const d of this.db.memoryStore.devices) {
       const lum = this.db.memoryStore.luminaires.find((l) => l.id === d.luminaire_id);
       const wattage = lum?.wattage ?? 70;
-      this.adapter.initDevice(d.id, wattage, d.reported_on ?? false);
-      this.adapter.initDevice(d.external_id, wattage, d.reported_on ?? false);
+      this.adapter.initDevice(d.id, wattage, Boolean(d.reported_on));
+      this.adapter.initDevice(d.external_id, wattage, Boolean(d.reported_on));
     }
   }
 
@@ -119,7 +119,8 @@ export class SimulatorServiceModule implements OnModuleInit, OnModuleDestroy {
 
     for (let i = 0; i < count; i++) {
       const idx = Math.floor(this.rng.next() * devices.length);
-      const dev = devices[idx];
+      const dev = devices.at(idx);
+      if (!dev) continue;
       const lum = this.db.memoryStore.luminaires.find((l) => l.id === dev.luminaire_id);
       const wattage = (lum?.wattage ?? 70) as 35 | 70 | 110;
 
@@ -194,7 +195,8 @@ export class SimulatorServiceModule implements OnModuleInit, OnModuleDestroy {
       while (affectedSet.size < count && affectedSet.size < candidates.length && iterations < count * 3) {
         iterations++;
         const randIdx = Math.floor(this.rng.next() * candidates.length);
-        const dev = candidates[randIdx];
+        const dev = candidates.at(randIdx);
+        if (!dev) continue;
         if (!affectedSet.has(dev.external_id)) {
           this.activeFaults.set(dev.external_id, { faultCode: dto.faultCode, injectedAt: nowIso });
           this.adapter.injectFault(dev.external_id, dto.faultCode);

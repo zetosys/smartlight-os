@@ -405,14 +405,14 @@ export default function UsersPage() {
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1.5 font-sans">
                         <button
-                          onClick={() => handleToggleMfa(user)}
+                          onClick={() => { void handleToggleMfa(user); }}
                           title="Toggle MFA requirement"
                           className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[11px] border border-slate-700"
                         >
                           MFA
                         </button>
                         <button
-                          onClick={() => handleToggleActive(user)}
+                          onClick={() => { void handleToggleActive(user); }}
                           className={`px-2 py-1 rounded text-[11px] border transition ${
                             user.active
                               ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'

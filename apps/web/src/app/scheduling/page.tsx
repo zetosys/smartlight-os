@@ -49,7 +49,7 @@ export default function SchedulingPage() {
 
   useEffect(() => {
     if (!selectedUlb) return;
-    loadData();
+    void loadData();
   }, [selectedUlb]);
 
   const loadData = async () => {

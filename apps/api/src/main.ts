@@ -13,7 +13,7 @@ async function bootstrap() {
   logger.log('Municipal fleet seeded with 4,608 streetlights and GIS corridors.');
 
   // Security Headers Middleware (Enterprise Hardening)
-  app.use((req: any, res: any, next: any) => {
+  app.use((_req: unknown, res: { setHeader: (key: string, val: string) => void }, next: () => void) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-XSS-Protection', '1; mode=block');
