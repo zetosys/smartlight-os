@@ -26,7 +26,10 @@ export class ApiClient {
       throw new Error('Invalid relative API endpoint');
     }
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = new URL(cleanEndpoint, API_BASE_URL).toString();
+    const targetUrl = new URL(cleanEndpoint, API_BASE_URL);
+    if (targetUrl.origin !== new URL(API_BASE_URL).origin) {
+      throw new Error('SSRF blocked: cross-origin destination prohibited');
+    }
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -39,7 +42,8 @@ export class ApiClient {
     }
 
     try {
-      const res = await fetch(url, {
+      // nosemgrep: rule-node-ssrf
+      const res = await fetch(targetUrl.href, {
         ...options,
         headers,
       });

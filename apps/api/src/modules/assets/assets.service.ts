@@ -141,9 +141,9 @@ export class AssetsService {
         lampType: luminaire?.lamp_type ?? luminaire?.lampType ?? 'LED',
         phaseConnection: luminaire?.phase_connection ?? luminaire?.phaseConnection ?? 'R',
         deviceExternalId: device?.external_id || p.deviceExternalId || 'N/A',
-        isOnline: device ? (device.is_online ?? device.isOnline ?? true) : (p.isOnline ?? true),
-        reportedOn: device ? (device.reported_on ?? device.reportedOn ?? false) : (p.reportedOn ?? false),
-        desiredOn: device ? (device.desired_on ?? device.desiredOn ?? false) : (p.desiredOn ?? false),
+        isOnline: device ? device.is_online : (p.isOnline ?? true),
+        reportedOn: device ? device.reported_on : (p.reportedOn ?? false),
+        desiredOn: device ? device.desired_on : (p.desiredOn ?? false),
       };
     });
   }
@@ -479,7 +479,8 @@ export class AssetsService {
     const ward = this.db.memoryStore.wards.find((w) => w.id === dto.wardId);
     if (!ward) throw new NotFoundException('Ward not found');
     const zone = this.db.memoryStore.zones.find((z) => z.id === ward.zone_id);
-    this.assertUlbAccess(user, zone?.ulb_id || '');
+    if (!zone) throw new NotFoundException('Zone not found');
+    this.assertUlbAccess(user, zone.ulb_id);
 
     const newId = generateSecureId('street');
     const street = {
@@ -490,7 +491,7 @@ export class AssetsService {
       created_at: new Date().toISOString(),
     };
     this.db.memoryStore.streets.push(street);
-    this.recordAudit(user, zone!.ulb_id, 'STREET_CREATED', newId, { name: dto.name });
+    this.recordAudit(user, zone.ulb_id, 'STREET_CREATED', newId, { name: dto.name });
     return street;
   }
 

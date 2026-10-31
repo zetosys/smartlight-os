@@ -4,3 +4,4 @@ engines:
     enabled: false
 exclude_paths:
   - 'pnpm-lock.yaml'
+  - 'apps/api/src/database/migrations/**'

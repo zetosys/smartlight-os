@@ -187,7 +187,7 @@ export const UlbProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             method: 'POST',
             body: JSON.stringify({ email: acc.email, password: 'SmartLight@2026!' }),
           });
-          if (res?.accessToken) {
+          if (res.accessToken) {
             ApiClient.setToken(res.accessToken);
           }
         } catch {
@@ -200,7 +200,7 @@ export const UlbProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const checkHealth = async () => {
     try {
       const res = (await fetch('http://localhost:4000/health').then((r) => r.json())) as { status?: string };
-      setIsBackendOnline(res?.status === 'healthy' || res?.status === 'degraded');
+      setIsBackendOnline(res.status === 'healthy' || res.status === 'degraded');
     } catch {
       setIsBackendOnline(false);
     }

@@ -42,17 +42,27 @@ const TILE_LAYERS: Record<
   osm_standard: {
     name: 'OpenStreetMap',
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+    attribution: '© OpenStreetMap contributors',
     maxZoom: 19,
   },
   satellite: {
     name: 'Esri Satellite',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution:
-      'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+    attribution: 'Tiles © Esri — Source: Esri, USDA, USGS, GeoEye, and the GIS User Community',
     maxZoom: 19,
   },
+};
+
+const createSafePopupElement = (htmlString: string): HTMLElement => {
+  if (typeof DOMParser !== 'undefined') {
+    const doc = new DOMParser().parseFromString(htmlString, 'text/html');
+    if (doc.body.firstElementChild) {
+      return doc.body.firstElementChild as HTMLElement;
+    }
+  }
+  const fallbackDiv = document.createElement('div');
+  fallbackDiv.textContent = 'Asset Details';
+  return fallbackDiv;
 };
 
 const escapeHtml = (val: unknown): string => {
@@ -118,7 +128,7 @@ export default function LeafletOsmMap({
       if (!containerRef.current || mapRef.current) return;
 
       const L = (await import('leaflet')).default;
-      if (!isMounted || !containerRef.current) return;
+      if (!isMounted) return;
       LRef.current = L;
 
       // Create Map instance
@@ -155,7 +165,7 @@ export default function LeafletOsmMap({
       setMapReady(true);
     }
 
-    initMap();
+    void initMap();
 
     return () => {
       isMounted = false;
@@ -322,7 +332,7 @@ export default function LeafletOsmMap({
         </div>
       `;
 
-      marker.bindPopup(popupHtml);
+      marker.bindPopup(createSafePopupElement(popupHtml));
       marker.on('click', () => {
         onSelectFeature(gw);
       });
@@ -394,7 +404,7 @@ export default function LeafletOsmMap({
         </div>
       `;
 
-      marker.bindPopup(popupHtml);
+      marker.bindPopup(createSafePopupElement(popupHtml));
       marker.on('click', () => {
         onSelectFeature(feeder);
       });
@@ -504,8 +514,6 @@ export default function LeafletOsmMap({
       );
 
       // Interactive Popup with Real-Time Telemetry and Direct Switching
-      const popupDiv = document.createElement('div');
-      popupDiv.className = 'p-3 text-xs font-sans space-y-2.5 min-w-[260px]';
       const safeCode = escapeHtml(pole.properties.externalCode || pole.id);
       const safeId = escapeHtml(pole.id?.slice(0, 16));
       const safePhaseColor = escapeHtml(phaseColor);
@@ -517,72 +525,75 @@ export default function LeafletOsmMap({
       const safeGateway = escapeHtml(pole.properties.gatewayExternalCode || 'GW-01');
       const safePoleId = escapeHtml(pole.id);
 
-      popupDiv.innerHTML = `
-        <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
-          <div>
-            <div class="font-bold text-white font-mono text-xs flex items-center gap-1.5">
-              <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${safePhaseColor}"></span>
-              ${safeCode}
+      const popupHtml = `
+        <div class="p-3 text-xs font-sans space-y-2.5 min-w-[260px]">
+          <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
+            <div>
+              <div class="font-bold text-white font-mono text-xs flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${safePhaseColor}"></span>
+                ${safeCode}
+              </div>
+              <div class="text-[10px] text-slate-400 font-mono">Asset ID: ${safeId}...</div>
             </div>
-            <div class="text-[10px] text-slate-400 font-mono">Asset ID: ${safeId}...</div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+              isReportedOn
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                : isFault
+                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                : 'bg-slate-800 text-slate-300 border border-slate-700'
+            }">
+              ${isReportedOn ? 'ON (ACTIVE)' : isFault ? 'FAULT' : 'OFF (STANDBY)'}
+            </span>
           </div>
-          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-            isReportedOn
-              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-              : isFault
-              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-              : 'bg-slate-800 text-slate-300 border border-slate-700'
-          }">
-            ${isReportedOn ? 'ON (ACTIVE)' : isFault ? 'FAULT' : 'OFF (STANDBY)'}
-          </span>
-        </div>
 
-        <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
-          <div class="p-1.5 bg-slate-950/80 rounded border border-slate-800">
-            <span class="text-slate-400 block text-[9px]">Phase Line</span>
-            <strong style="color: ${safePhaseColor}">Phase ${safePhase} (415V)</strong>
+          <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
+            <div class="p-1.5 bg-slate-950/80 rounded border border-slate-800">
+              <span class="text-slate-400 block text-[9px]">Phase Line</span>
+              <strong style="color: ${safePhaseColor}">Phase ${safePhase} (415V)</strong>
+            </div>
+            <div class="p-1.5 bg-slate-950/80 rounded border border-slate-800">
+              <span class="text-slate-400 block text-[9px]">Luminaire</span>
+              <strong class="text-amber-300">${safeWattage}W LED</strong>
+            </div>
+            <div class="p-1.5 bg-slate-950/80 rounded border border-slate-800">
+              <span class="text-slate-400 block text-[9px]">RMS Voltage</span>
+              <strong class="text-white">${safeVoltage} V</strong>
+            </div>
+            <div class="p-1.5 bg-slate-950/80 rounded border border-slate-800">
+              <span class="text-slate-400 block text-[9px]">Current / PF</span>
+              <strong class="text-emerald-400">${safeCurrent}A / 0.98</strong>
+            </div>
           </div>
-          <div class="p-1.5 bg-slate-950/80 rounded border border-slate-800">
-            <span class="text-slate-400 block text-[9px]">Luminaire</span>
-            <strong class="text-amber-300">${safeWattage}W LED</strong>
-          </div>
-          <div class="p-1.5 bg-slate-950/80 rounded border border-slate-800">
-            <span class="text-slate-400 block text-[9px]">RMS Voltage</span>
-            <strong class="text-white">${safeVoltage} V</strong>
-          </div>
-          <div class="p-1.5 bg-slate-950/80 rounded border border-slate-800">
-            <span class="text-slate-400 block text-[9px]">Current / PF</span>
-            <strong class="text-emerald-400">${safeCurrent}A / 0.98</strong>
-          </div>
-        </div>
 
-        <div class="text-[10px] text-slate-400 font-mono space-y-0.5 border-t border-slate-800 pt-1.5">
-          <div class="flex justify-between">
-            <span>Feeder Panel:</span>
-            <span class="text-emerald-400 font-bold">${safeFeeder}</span>
+          <div class="text-[10px] text-slate-400 font-mono space-y-0.5 border-t border-slate-800 pt-1.5">
+            <div class="flex justify-between">
+              <span>Feeder Panel:</span>
+              <span class="text-emerald-400 font-bold">${safeFeeder}</span>
+            </div>
+            <div class="flex justify-between">
+              <span>LoRa Gateway:</span>
+              <span class="text-purple-300 font-bold">${safeGateway}</span>
+            </div>
           </div>
-          <div class="flex justify-between">
-            <span>LoRa Gateway:</span>
-            <span class="text-purple-300 font-bold">${safeGateway}</span>
-          </div>
-        </div>
 
-        <div class="pt-2 border-t border-slate-800 flex items-center gap-2">
-          <button id="btn-toggle-${safePoleId}" class="flex-1 py-1.5 rounded text-[11px] font-bold flex items-center justify-center gap-1.5 transition ${
-            isReportedOn
-              ? 'bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800/80'
-              : 'bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/80'
-          }">
-            <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
-            <span>${isReportedOn ? 'Switch OFF' : 'Switch ON'}</span>
-          </button>
-          <button id="btn-inspect-${safePoleId}" class="px-2.5 py-1.5 rounded text-[11px] font-mono bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 transition" title="Inspect telemetry & details in side panel">
-            Inspect
-          </button>
+          <div class="pt-2 border-t border-slate-800 flex items-center gap-2">
+            <button id="btn-toggle-${safePoleId}" class="flex-1 py-1.5 rounded text-[11px] font-bold flex items-center justify-center gap-1.5 transition ${
+              isReportedOn
+                ? 'bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800/80'
+                : 'bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/80'
+            }">
+              <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+              <span>${isReportedOn ? 'Switch OFF' : 'Switch ON'}</span>
+            </button>
+            <button id="btn-inspect-${safePoleId}" class="px-2.5 py-1.5 rounded text-[11px] font-mono bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 transition" title="Inspect telemetry & details in side panel">
+              Inspect
+            </button>
+          </div>
         </div>
       `;
 
       // Attach event listeners when popup opens
+      const popupDiv = createSafePopupElement(popupHtml);
       marker.bindPopup(popupDiv);
       marker.on('popupopen', () => {
         onSelectFeature(pole);

@@ -49,7 +49,7 @@ export default function UsersPage() {
     setLoading(true);
     try {
       const data = await ApiClient.fetch<UserListItem[]>('users');
-      setUserList(data || []);
+      setUserList(data);
     } catch {
       // Fallback data when API is offline
       setUserList([
@@ -148,7 +148,7 @@ export default function UsersPage() {
       const data = await ApiClient.fetch<{ roleCode: string; permissions: PermissionCode[] }[]>(
         'users/roles/matrix',
       );
-      setRoleMatrix(data || []);
+      setRoleMatrix(data);
     } catch {
       // Fallback matrix
       setRoleMatrix([
@@ -197,8 +197,8 @@ export default function UsersPage() {
   };
 
   useEffect(() => {
-    fetchUsers();
-    fetchRoleMatrix();
+    void fetchUsers();
+    void fetchRoleMatrix();
   }, [currentUser]);
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -224,9 +224,9 @@ export default function UsersPage() {
       setFormEmail('');
       setFormFirstName('');
       setFormLastName('');
-      fetchUsers();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to create user');
+      void fetchUsers();
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to create user');
     } finally {
       setIsSubmitting(false);
     }
@@ -239,8 +239,8 @@ export default function UsersPage() {
       setUserList((prev) =>
         prev.map((u) => (u.id === user.id ? { ...u, active: !u.active } : u)),
       );
-    } catch (err: any) {
-      setErrorMsg(err.message);
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to toggle status');
     }
   };
 
@@ -251,8 +251,8 @@ export default function UsersPage() {
       setUserList((prev) =>
         prev.map((u) => (u.id === user.id ? { ...u, mfaEnabled: !u.mfaEnabled } : u)),
       );
-    } catch (err: any) {
-      setErrorMsg(err.message);
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to toggle MFA');
     }
   };
 
@@ -272,14 +272,18 @@ export default function UsersPage() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setIsModalOpen(true);
+            }}
             className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded text-xs flex items-center gap-1.5 transition shadow"
           >
             <UserPlus className="w-3.5 h-3.5" />
             Add New User
           </button>
           <button
-            onClick={fetchUsers}
+            onClick={() => {
+              void fetchUsers();
+            }}
             disabled={loading}
             className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition"
           >
@@ -305,7 +309,9 @@ export default function UsersPage() {
       {/* Tabs */}
       <div className="flex border-b border-slate-800 gap-6 text-xs font-medium">
         <button
-          onClick={() => setActiveTab('users')}
+          onClick={() => {
+            setActiveTab('users');
+          }}
           className={`pb-2.5 flex items-center gap-2 border-b-2 transition ${
             activeTab === 'users'
               ? 'border-amber-400 text-amber-400'
@@ -317,7 +323,9 @@ export default function UsersPage() {
         </button>
 
         <button
-          onClick={() => setActiveTab('matrix')}
+          onClick={() => {
+            setActiveTab('matrix');
+          }}
           className={`pb-2.5 flex items-center gap-2 border-b-2 transition ${
             activeTab === 'matrix'
               ? 'border-amber-400 text-amber-400'
@@ -329,7 +337,9 @@ export default function UsersPage() {
         </button>
 
         <button
-          onClick={() => setActiveTab('ulbs')}
+          onClick={() => {
+            setActiveTab('ulbs');
+          }}
           className={`pb-2.5 flex items-center gap-2 border-b-2 transition ${
             activeTab === 'ulbs'
               ? 'border-amber-400 text-amber-400'
@@ -341,7 +351,9 @@ export default function UsersPage() {
         </button>
 
         <button
-          onClick={() => setActiveTab('portals')}
+          onClick={() => {
+            setActiveTab('portals');
+          }}
           className={`pb-2.5 flex items-center gap-2 border-b-2 transition ${
             activeTab === 'portals'
               ? 'border-amber-400 text-amber-400'
@@ -698,14 +710,21 @@ export default function UsersPage() {
                 Provision Municipal Operator Account
               </h3>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false);
+                }}
                 className="text-slate-400 hover:text-white"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateUser} className="space-y-3 text-xs">
+            <form
+              onSubmit={(e) => {
+                void handleCreateUser(e);
+              }}
+              className="space-y-3 text-xs"
+            >
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-slate-400 block mb-1">First Name</label>
@@ -713,7 +732,9 @@ export default function UsersPage() {
                     type="text"
                     required
                     value={formFirstName}
-                    onChange={(e) => setFormFirstName(e.target.value)}
+                    onChange={(e) => {
+                      setFormFirstName(e.target.value);
+                    }}
                     className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-amber-500 font-mono"
                     placeholder="Bashir"
                   />
@@ -724,7 +745,9 @@ export default function UsersPage() {
                     type="text"
                     required
                     value={formLastName}
-                    onChange={(e) => setFormLastName(e.target.value)}
+                    onChange={(e) => {
+                      setFormLastName(e.target.value);
+                    }}
                     className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-amber-500 font-mono"
                     placeholder="Lone"
                   />
@@ -737,7 +760,9 @@ export default function UsersPage() {
                   type="email"
                   required
                   value={formEmail}
-                  onChange={(e) => setFormEmail(e.target.value)}
+                  onChange={(e) => {
+                    setFormEmail(e.target.value);
+                  }}
                   className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-amber-500 font-mono"
                   placeholder="tech@smartlight.os"
                 />
@@ -749,7 +774,9 @@ export default function UsersPage() {
                   <select
                     className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-amber-500"
                     value={formRole}
-                    onChange={(e) => setFormRole(e.target.value as UserRole)}
+                    onChange={(e) => {
+                      setFormRole(e.target.value as UserRole);
+                    }}
                   >
                     {currentUser.isGlobalAdmin && (
                       <option value="PLATFORM_ADMIN">PLATFORM_ADMIN</option>
@@ -770,7 +797,9 @@ export default function UsersPage() {
                     disabled={formRole === 'PLATFORM_ADMIN' || formRole === 'AUDITOR' || formRole === 'REPORTS_VIEWER'}
                     className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-amber-500 disabled:opacity-50"
                     value={formUlbId}
-                    onChange={(e) => setFormUlbId(e.target.value)}
+                    onChange={(e) => {
+                      setFormUlbId(e.target.value);
+                    }}
                   >
                     {allUlbs.map((u) => (
                       <option key={u.id} value={u.id}>
@@ -786,7 +815,9 @@ export default function UsersPage() {
                   type="checkbox"
                   id="mfaCheckbox"
                   checked={formMfa}
-                  onChange={(e) => setFormMfa(e.target.checked)}
+                  onChange={(e) => {
+                    setFormMfa(e.target.checked);
+                  }}
                   className="rounded bg-slate-950 border-slate-800 text-amber-500 focus:ring-0"
                 />
                 <label htmlFor="mfaCheckbox" className="text-slate-300">
@@ -797,7 +828,9 @@ export default function UsersPage() {
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                  }}
                   className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs"
                 >
                   Cancel

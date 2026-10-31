@@ -138,7 +138,7 @@ export function generateFleet(seed: number = 365): GeneratedFleet {
     const wardId = `ward-gbl-${String(w).padStart(2, '0')}`;
     const ward: Ward = {
       id: wardId,
-      zoneId: gblZones[zoneIdx].id,
+      zoneId: gblZones.at(zoneIdx)?.id ?? 'zone-gbl-01',
       ulbId: gbl.id,
       wardNumber: w,
       name: `Ward ${w} - ${['Beehama', 'Duderhama', 'Tullamulla', 'Salura', 'Fatehpora', 'Arampora', 'Wanipora', 'Gund', 'Kangan Link', 'Qamaria Park', 'Hospital Road', 'Courthouse Rd'][w - 1]}`,
@@ -194,7 +194,9 @@ export function generateFleet(seed: number = 365): GeneratedFleet {
   for (let g = 1; g <= gbl.gatewayCount; g++) {
     const gwId = `gw-gbl-${String(g).padStart(2, '0')}`;
     const fdr = gblFeeders[(g - 1) % gbl.feederCount];
-    const gwCoord = genCoord(fdr.location!.latitude, fdr.location!.longitude, 0.002, 0.003);
+    const gwLat = fdr.location?.latitude ?? gbl.centerLat;
+    const gwLng = fdr.location?.longitude ?? gbl.centerLng;
+    const gwCoord = genCoord(gwLat, gwLng, 0.002, 0.003);
     const gw: Gateway = {
       id: gwId,
       ulbId: gbl.id,
@@ -315,7 +317,7 @@ export function generateFleet(seed: number = 365): GeneratedFleet {
     const wardId = `ward-ktr-${String(w).padStart(2, '0')}`;
     const ward: Ward = {
       id: wardId,
-      zoneId: ktrZones[zoneIdx].id,
+      zoneId: ktrZones.at(zoneIdx)?.id ?? 'zone-ktr-01',
       ulbId: ktr.id,
       wardNumber: w,
       name: `Ward ${w} - ${['Banganga Road', 'Bus Stand', 'Railway Station', 'Chintamani', 'Katra Bazaar', 'Shalimar Park', 'Panthal Road', 'Helipad Road'][w - 1]}`,
@@ -371,7 +373,9 @@ export function generateFleet(seed: number = 365): GeneratedFleet {
   for (let g = 1; g <= ktr.gatewayCount; g++) {
     const gwId = `gw-ktr-${String(g).padStart(2, '0')}`;
     const fdr = ktrFeeders[(g - 1) % ktr.feederCount];
-    const gwCoord = genCoord(fdr.location!.latitude, fdr.location!.longitude, 0.002, 0.002);
+    const gwLat = fdr.location?.latitude ?? ktr.centerLat;
+    const gwLng = fdr.location?.longitude ?? ktr.centerLng;
+    const gwCoord = genCoord(gwLat, gwLng, 0.002, 0.002);
     const gw: Gateway = {
       id: gwId,
       ulbId: ktr.id,

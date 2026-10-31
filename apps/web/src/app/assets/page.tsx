@@ -72,7 +72,7 @@ export default function AssetsPage() {
   const [feeders, setFeeders] = useState<AssetFeeder[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
   // Modals state
   const [showFeederModal, setShowFeederModal] = useState<boolean>(false);
@@ -113,19 +113,19 @@ export default function AssetsPage() {
         ApiClient.fetch<AssetZone[]>(`assets/hierarchy${ulbQuery}`),
         ApiClient.fetch<AssetFeeder[]>(`assets/feeders${ulbQuery}`),
       ]);
-      setHierarchy(hData || []);
-      setFeeders(fData || []);
+      setHierarchy(hData);
+      setFeeders(fData);
 
       // Auto-expand top zones
-      if (hData && Array.isArray(hData)) {
-        const initialExpand: Record<string, boolean> = {};
+      if (Array.isArray(hData)) {
+        const initialExpand = new Set<string>();
         hData.forEach((z: AssetZone) => {
-          initialExpand[z.id] = true;
+          initialExpand.add(z.id);
           z.wards?.forEach((w: AssetWard) => {
-            initialExpand[w.id] = true;
+            initialExpand.add(w.id);
           });
         });
-        setExpandedNodes((prev) => ({ ...initialExpand, ...prev }));
+        setExpandedNodes(initialExpand);
       }
     } catch {
       // Fallback preview if API is temporarily unavailable
@@ -184,7 +184,15 @@ export default function AssetsPage() {
   }, [loadAssets]);
 
   const toggleNode = (id: string) => {
-    setExpandedNodes((prev) => ({ ...prev, [id]: !prev[id] }));
+    setExpandedNodes((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   };
 
   // Stats calculation
@@ -511,7 +519,7 @@ export default function AssetsPage() {
           ) : (
             <div className="space-y-3 font-mono text-xs overflow-y-auto max-h-[620px] pr-2">
               {hierarchy.map((zone) => {
-                const isZoneOpen = expandedNodes[zone.id] ?? true;
+                const isZoneOpen = expandedNodes.has(zone.id);
                 return (
                   <div key={zone.id} className="border border-slate-800 rounded-lg bg-slate-950/40 overflow-hidden">
                     {/* Zone Header */}
@@ -542,7 +550,7 @@ export default function AssetsPage() {
                     {isZoneOpen && (
                       <div className="p-3 space-y-3">
                         {zone.wards?.map((ward: AssetWard) => {
-                          const isWardOpen = expandedNodes[ward.id] ?? true;
+                          const isWardOpen = expandedNodes.has(ward.id);
                           return (
                             <div key={ward.id} className="border border-slate-800/60 rounded bg-slate-900/30 p-2.5">
                               {/* Ward Header */}
@@ -572,8 +580,8 @@ export default function AssetsPage() {
                                     const filteredPoles = (street.poles || []).filter(
                                       (p: AssetPole) =>
                                         !searchQuery ||
-                                        p.external_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                        street.name?.toLowerCase().includes(searchQuery.toLowerCase()),
+                                        p.external_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                        street.name.toLowerCase().includes(searchQuery.toLowerCase()),
                                     );
 
                                     return (
@@ -699,7 +707,12 @@ export default function AssetsPage() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateFeeder} className="space-y-4 text-xs">
+            <form
+              onSubmit={(e) => {
+                void handleCreateFeeder(e);
+              }}
+              className="space-y-4 text-xs"
+            >
               <div>
                 <label className="block text-slate-300 font-medium mb-1">Panel Code (Unique)</label>
                 <input
@@ -814,7 +827,12 @@ export default function AssetsPage() {
               </button>
             </div>
 
-            <form onSubmit={handleCreatePole} className="space-y-4 text-xs">
+            <form
+              onSubmit={(e) => {
+                void handleCreatePole(e);
+              }}
+              className="space-y-4 text-xs"
+            >
               <div>
                 <label className="block text-slate-300 font-medium mb-1">Pole External Code (Unique)</label>
                 <input

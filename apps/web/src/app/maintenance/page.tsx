@@ -238,9 +238,10 @@ export default function MaintenancePage() {
 
       setTickets((prev) => prev.map((t) => (t.id === ticket.id ? updated : t)));
       setNotification(`Ticket ${ticket.id} advanced to ${nextStatus}.`);
-      setTimeout(() => setNotification(null), 3000);
-    } catch (err: any) {
-      setNotification(`Failed to update ticket: ${err.message}`);
+      setTimeout(() => { setNotification(null); }, 3000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setNotification(`Failed to update ticket: ${msg}`);
     }
   };
 
@@ -286,9 +287,10 @@ export default function MaintenancePage() {
       setNotification(`Work Order '${resolvingTicket.title}' RESOLVED! Parts inventory updated.`);
       setResolvingTicket(null);
       setResolutionNotes('');
-      setTimeout(() => setNotification(null), 4000);
-    } catch (err: any) {
-      setNotification(`Failed to resolve ticket: ${err.message}`);
+      setTimeout(() => { setNotification(null); }, 4000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setNotification(`Failed to resolve ticket: ${msg}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -721,7 +723,7 @@ export default function MaintenancePage() {
                       min="1"
                       max="10"
                       value={selectedPartQty}
-                      onChange={(e) => { setSelectedPartQty(parseInt(e.target.value, 10)); }}
+                      onChange={(e) => { setSelectedPartQty(Number.parseInt(e.target.value, 10) || 1); }}
                       className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs text-center"
                     />
                   </div>
