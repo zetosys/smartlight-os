@@ -24,7 +24,7 @@ export default function SettingsPage() {
     const fetchLogs = async () => {
       try {
         const data = await ApiClient.fetch<AuditLogItem[]>(`audit?ulbId=${selectedUlb?.id || ''}`);
-        setLogs(data || []);
+        setLogs(data);
       } catch {
         setLogs([
           {

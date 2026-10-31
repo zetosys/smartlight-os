@@ -62,7 +62,7 @@ export default function AlertsPage() {
           severity: 'MAJOR',
           status: 'OPEN',
           opened_at: new Date(Date.now() - 3600000).toISOString(),
-          deviceCode: `${selectedUlb ? selectedUlb.code : 'ULB'}-0003`,
+          deviceCode: `${selectedUlb.code}-0003`,
         },
         {
           id: 'c0000000-0000-0000-0000-000000000002',
@@ -71,7 +71,7 @@ export default function AlertsPage() {
           severity: 'CRITICAL',
           status: 'OPEN',
           opened_at: new Date(Date.now() - 1800000).toISOString(),
-          deviceCode: `${selectedUlb ? selectedUlb.code : 'ULB'}-0012`,
+          deviceCode: `${selectedUlb.code}-0012`,
         },
       ]);
     } finally {

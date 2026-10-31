@@ -416,7 +416,7 @@ export default function GisPage() {
 
     let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
     pts.forEach((f) => {
-      const [lng, lat] = (f.geometry as any).coordinates;
+      const [lng, lat] = (f.geometry as { coordinates: [number, number] }).coordinates;
       if (lng < minLng) minLng = lng;
       if (lng > maxLng) maxLng = lng;
       if (lat < minLat) minLat = lat;
@@ -564,7 +564,7 @@ export default function GisPage() {
     });
   };
 
-  const handleMouseUp = () => setIsDragging(false);
+  const handleMouseUp = () => { setIsDragging(false); };
 
   // Wheel zoom handling
   const handleWheel = (e: React.WheelEvent) => {
@@ -1203,7 +1203,8 @@ export default function GisPage() {
                           .join(' ');
 
                         const midIdx = Math.floor(road.points.length / 2);
-                        const labelPt = projectCoords(road.points[midIdx][0], road.points[midIdx][1]);
+                        const midPt = road.points.at(midIdx) ?? [0, 0];
+                        const labelPt = projectCoords(midPt[0], midPt[1]);
 
                         return (
                           <g key={road.id}>
@@ -1988,7 +1989,7 @@ export default function GisPage() {
       {showWorkOrderModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <form
-            onSubmit={handleCreateWorkOrder}
+            onSubmit={(e) => { void handleCreateWorkOrder(e); }}
             className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-lg p-5 space-y-4 shadow-2xl"
           >
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">

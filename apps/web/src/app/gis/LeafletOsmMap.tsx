@@ -53,26 +53,228 @@ const TILE_LAYERS: Record<
   },
 };
 
-const createSafePopupElement = (htmlString: string): HTMLElement => {
-  if (typeof DOMParser !== 'undefined') {
-    const doc = new DOMParser().parseFromString(htmlString, 'text/html');
-    if (doc.body.firstElementChild) {
-      return doc.body.firstElementChild as HTMLElement;
-    }
-  }
-  const fallbackDiv = document.createElement('div');
-  fallbackDiv.textContent = 'Asset Details';
-  return fallbackDiv;
+const buildGatewayPopupElement = (gw: GisFeature): HTMLElement => {
+  const container = document.createElement('div');
+  container.className = 'p-3 text-xs font-sans space-y-2 min-w-[240px]';
+
+  const header = document.createElement('div');
+  header.className = 'flex items-center justify-between border-b border-slate-700/80 pb-1.5';
+
+  const title = document.createElement('span');
+  title.className = 'font-bold text-white flex items-center gap-1.5 font-mono';
+  const dot = document.createElement('span');
+  dot.className = 'w-2 h-2 rounded-full bg-purple-400';
+  title.appendChild(dot);
+  title.appendChild(document.createTextNode(` ${gw.properties.externalCode || gw.id}`));
+
+  const badge = document.createElement('span');
+  badge.className = 'px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40';
+  badge.textContent = 'MICRO-GATEWAY';
+
+  header.appendChild(title);
+  header.appendChild(badge);
+  container.appendChild(header);
+
+  const grid = document.createElement('div');
+  grid.className = 'grid grid-cols-2 gap-2 text-[11px] font-mono';
+
+  const addGridCell = (label: string, value: string, valClass: string) => {
+    const cell = document.createElement('div');
+    const lbl = document.createElement('span');
+    lbl.className = 'text-slate-400 block text-[10px]';
+    lbl.textContent = label;
+    const strong = document.createElement('strong');
+    strong.className = valClass;
+    strong.textContent = value;
+    cell.appendChild(lbl);
+    cell.appendChild(strong);
+    grid.appendChild(cell);
+  };
+
+  addGridCell('LoRa Nodes:', `${gw.properties.connectedDevicesCount || 45} / 45`, 'text-white');
+  addGridCell('Frequency:', '865–867 MHz', 'text-purple-300');
+  addGridCell('Backhaul:', '4G LTE-M', 'text-emerald-400');
+  addGridCell('Duty Cycle:', '0.38% (Met)', 'text-sky-300');
+  container.appendChild(grid);
+
+  const footer = document.createElement('div');
+  footer.className = 'pt-2 border-t border-slate-700/60 flex items-center justify-between text-[10px] font-mono text-slate-400';
+  const rssi = document.createElement('span');
+  rssi.textContent = 'Avg RSSI: ';
+  const rssiVal = document.createElement('strong');
+  rssiVal.className = 'text-emerald-400';
+  rssiVal.textContent = '-88 dBm';
+  rssi.appendChild(rssiVal);
+
+  const snr = document.createElement('span');
+  snr.textContent = 'SNR: ';
+  const snrVal = document.createElement('strong');
+  snrVal.className = 'text-emerald-400';
+  snrVal.textContent = '+9.4 dB';
+  snr.appendChild(snrVal);
+
+  footer.appendChild(rssi);
+  footer.appendChild(snr);
+  container.appendChild(footer);
+
+  return container;
 };
 
-const escapeHtml = (val: unknown): string => {
-  if (val === null || val === undefined) return '';
-  return String(val)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+const buildFeederPopupElement = (feeder: GisFeature): HTMLElement => {
+  const container = document.createElement('div');
+  container.className = 'p-3 text-xs font-sans space-y-2 min-w-[240px]';
+
+  const header = document.createElement('div');
+  header.className = 'flex items-center justify-between border-b border-slate-700/80 pb-1.5';
+
+  const title = document.createElement('span');
+  title.className = 'font-bold text-white flex items-center gap-1.5 font-mono';
+  const dot = document.createElement('span');
+  dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+  title.appendChild(dot);
+  title.appendChild(document.createTextNode(` ${feeder.properties.panelCode || feeder.properties.name || 'CCMS'}`));
+
+  const badge = document.createElement('span');
+  badge.className = 'px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+  badge.textContent = 'CCMS PANEL';
+
+  header.appendChild(title);
+  header.appendChild(badge);
+  container.appendChild(header);
+
+  const grid = document.createElement('div');
+  grid.className = 'grid grid-cols-2 gap-2 text-[11px] font-mono';
+
+  const addGridCell = (label: string, value: string, valClass: string) => {
+    const cell = document.createElement('div');
+    const lbl = document.createElement('span');
+    lbl.className = 'text-slate-400 block text-[10px]';
+    lbl.textContent = label;
+    const strong = document.createElement('strong');
+    strong.className = valClass;
+    strong.textContent = value;
+    cell.appendChild(lbl);
+    cell.appendChild(strong);
+    grid.appendChild(cell);
+  };
+
+  addGridCell('Capacity:', `${feeder.properties.capacityKw || 30} kW`, 'text-white');
+  addGridCell('Connected Poles:', `${feeder.properties.connectedLuminairesCount || 26}`, 'text-amber-400');
+  addGridCell('Active Load:', `${(feeder.properties.activeLoadKw || 1.8).toFixed(1)} kW`, 'text-emerald-400');
+  addGridCell('Energy Meter:', `${feeder.properties.meterNumber || 'MTR-1001'}`, 'text-slate-300');
+  container.appendChild(grid);
+
+  return container;
+};
+
+const buildPolePopupElement = (
+  pole: GisFeature,
+  isReportedOn: boolean,
+  onToggle: () => void,
+  onInspect: () => void,
+): HTMLElement => {
+  const container = document.createElement('div');
+  container.className = 'p-3 text-xs font-sans space-y-2 min-w-[260px]';
+
+  const header = document.createElement('div');
+  header.className = 'flex items-center justify-between border-b border-slate-700/80 pb-1.5';
+
+  const titleWrap = document.createElement('div');
+  const title = document.createElement('span');
+  title.className = 'font-bold text-white flex items-center gap-1.5 font-mono';
+  const dot = document.createElement('span');
+  dot.className = `w-2 h-2 rounded-full ${isReportedOn ? 'bg-amber-400 animate-pulse' : 'bg-slate-600'}`;
+  title.appendChild(dot);
+  title.appendChild(document.createTextNode(` ${pole.properties.externalCode || pole.id}`));
+  titleWrap.appendChild(title);
+
+  const badge = document.createElement('span');
+  badge.className = `px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+    isReportedOn
+      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+      : 'bg-slate-800 text-slate-400 border border-slate-700'
+  }`;
+  badge.textContent = isReportedOn ? 'ILLUMINATED' : 'EXTINGUISHED';
+
+  header.appendChild(titleWrap);
+  header.appendChild(badge);
+  container.appendChild(header);
+
+  const grid = document.createElement('div');
+  grid.className = 'grid grid-cols-2 gap-2 text-[11px] font-mono';
+
+  const addGridBox = (label: string, value: string, valClass: string, valStyle?: string) => {
+    const box = document.createElement('div');
+    box.className = 'p-1.5 bg-slate-950/80 rounded border border-slate-800';
+    const lbl = document.createElement('span');
+    lbl.className = 'text-slate-400 block text-[9px]';
+    lbl.textContent = label;
+    const strong = document.createElement('strong');
+    strong.className = valClass;
+    if (valStyle) strong.setAttribute('style', valStyle);
+    strong.textContent = value;
+    box.appendChild(lbl);
+    box.appendChild(strong);
+    grid.appendChild(box);
+  };
+
+  const phase = pole.properties.phase || 'R';
+  const phaseColor = phase === 'R' ? '#ef4444' : phase === 'Y' ? '#eab308' : '#3b82f6';
+  addGridBox('Phase Line', `Phase ${phase} (415V)`, '', `color: ${phaseColor}`);
+  addGridBox('Luminaire', `${pole.properties.wattage || 70}W LED`, 'text-amber-300');
+  addGridBox('RMS Voltage', `${(pole.properties.voltage || 230).toFixed(1)} V`, 'text-white');
+  addGridBox('Current / PF', `${(pole.properties.currentAmps || 0.32).toFixed(2)}A / 0.98`, 'text-emerald-400');
+  container.appendChild(grid);
+
+  const feederInfo = document.createElement('div');
+  feederInfo.className = 'text-[10px] text-slate-400 font-mono space-y-0.5 border-t border-slate-800 pt-1.5';
+
+  const fRow = document.createElement('div');
+  fRow.className = 'flex justify-between';
+  const fLbl = document.createElement('span');
+  fLbl.textContent = 'Feeder Panel:';
+  const fVal = document.createElement('span');
+  fVal.className = 'text-emerald-400 font-bold';
+  fVal.textContent = pole.properties.feederName || 'Feeder Segment';
+  fRow.appendChild(fLbl);
+  fRow.appendChild(fVal);
+
+  const gRow = document.createElement('div');
+  gRow.className = 'flex justify-between';
+  const gLbl = document.createElement('span');
+  gLbl.textContent = 'LoRa Gateway:';
+  const gVal = document.createElement('span');
+  gVal.className = 'text-purple-300 font-bold';
+  gVal.textContent = pole.properties.gatewayExternalCode || 'LoRa Gateway';
+  gRow.appendChild(gLbl);
+  gRow.appendChild(gVal);
+
+  feederInfo.appendChild(fRow);
+  feederInfo.appendChild(gRow);
+  container.appendChild(feederInfo);
+
+  const btnRow = document.createElement('div');
+  btnRow.className = 'pt-2 border-t border-slate-800 flex items-center gap-2';
+
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = `flex-1 py-1.5 rounded text-[11px] font-bold flex items-center justify-center gap-1.5 transition ${
+    isReportedOn
+      ? 'bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800/80'
+      : 'bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/80'
+  }`;
+  toggleBtn.textContent = isReportedOn ? 'Switch OFF' : 'Switch ON';
+  toggleBtn.onclick = () => { onToggle(); };
+
+  const inspectBtn = document.createElement('button');
+  inspectBtn.className = 'px-2.5 py-1.5 rounded text-[11px] font-mono bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 transition';
+  inspectBtn.textContent = 'Inspect';
+  inspectBtn.onclick = () => { onInspect(); };
+
+  btnRow.appendChild(toggleBtn);
+  btnRow.appendChild(inspectBtn);
+  container.appendChild(btnRow);
+
+  return container;
 };
 
 const getFeaturePoint = (feature: GisFeature): [number, number] => {
@@ -308,31 +510,7 @@ export default function LeafletOsmMap({
 
       const marker = L.marker(latLng, { icon: gwIcon });
 
-      const popupHtml = `
-        <div class="p-3 text-xs font-sans space-y-2 min-w-[240px]">
-          <div class="flex items-center justify-between border-b border-slate-700/80 pb-1.5">
-            <span class="font-bold text-white flex items-center gap-1.5 font-mono">
-              <span class="w-2 h-2 rounded-full bg-purple-400"></span>
-              ${gw.properties.externalCode || gw.id}
-            </span>
-            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
-              MICRO-GATEWAY
-            </span>
-          </div>
-          <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
-            <div><span class="text-slate-400 block text-[10px]">LoRa Nodes:</span><strong class="text-white">${gw.properties.connectedDevicesCount || 45} / 45</strong></div>
-            <div><span class="text-slate-400 block text-[10px]">Frequency:</span><strong class="text-purple-300">865–867 MHz</strong></div>
-            <div><span class="text-slate-400 block text-[10px]">Backhaul:</span><strong class="text-emerald-400">4G LTE-M</strong></div>
-            <div><span class="text-slate-400 block text-[10px]">Duty Cycle:</span><strong class="text-sky-300">0.38% (Met)</strong></div>
-          </div>
-          <div class="pt-2 border-t border-slate-700/60 flex items-center justify-between text-[10px] font-mono text-slate-400">
-            <span>Avg RSSI: <strong class="text-emerald-400">-88 dBm</strong></span>
-            <span>SNR: <strong class="text-emerald-400">+9.4 dB</strong></span>
-          </div>
-        </div>
-      `;
-
-      marker.bindPopup(createSafePopupElement(popupHtml));
+      marker.bindPopup(buildGatewayPopupElement(gw));
       marker.on('click', () => {
         onSelectFeature(gw);
       });
@@ -384,27 +562,7 @@ export default function LeafletOsmMap({
 
       const marker = L.marker(latLng, { icon: fdrIcon });
 
-      const popupHtml = `
-        <div class="p-3 text-xs font-sans space-y-2 min-w-[240px]">
-          <div class="flex items-center justify-between border-b border-slate-700/80 pb-1.5">
-            <span class="font-bold text-white flex items-center gap-1.5 font-mono">
-              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-              ${feeder.properties.panelCode || feeder.properties.name}
-            </span>
-            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-              CCMS PANEL
-            </span>
-          </div>
-          <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
-            <div><span class="text-slate-400 block text-[10px]">Capacity:</span><strong class="text-white">${feeder.properties.capacityKw || 30} kW</strong></div>
-            <div><span class="text-slate-400 block text-[10px]">Connected Poles:</span><strong class="text-amber-400">${feeder.properties.connectedLuminairesCount || 26}</strong></div>
-            <div><span class="text-slate-400 block text-[10px]">Active Load:</span><strong class="text-emerald-400">${(feeder.properties.activeLoadKw || 1.8).toFixed(1)} kW</strong></div>
-            <div><span class="text-slate-400 block text-[10px]">Energy Meter:</span><strong class="text-slate-300">${feeder.properties.meterNumber || 'MTR-1001'}</strong></div>
-          </div>
-        </div>
-      `;
-
-      marker.bindPopup(createSafePopupElement(popupHtml));
+      marker.bindPopup(buildFeederPopupElement(feeder));
       marker.on('click', () => {
         onSelectFeature(feeder);
       });
@@ -498,118 +656,39 @@ export default function LeafletOsmMap({
       const marker = L.marker(latLng, { icon: poleIcon });
 
       // Hover Tooltip
-      marker.bindTooltip(
-        `
-        <div class="font-mono text-[11px] space-y-0.5">
-          <div class="font-bold text-white flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full" style="background-color: ${phaseColor}"></span>
-            ${pole.properties.externalCode || pole.id}
-          </div>
-          <div class="text-[10px] text-slate-300">Phase ${phase} | ${wattage}W | ${
-          isReportedOn ? '💡 ILLUMINATED' : isFault ? '⚠️ FAULT' : 'STANDBY'
-        }</div>
-        </div>
-      `,
-        { sticky: true, opacity: 0.95 },
-      );
+      const tooltipEl = document.createElement('div');
+      tooltipEl.className = 'font-mono text-[11px] space-y-0.5';
+      const ttTitle = document.createElement('div');
+      ttTitle.className = 'font-bold text-white flex items-center gap-1.5';
+      const ttDot = document.createElement('span');
+      ttDot.className = 'w-2 h-2 rounded-full';
+      ttDot.style.backgroundColor = phaseColor;
+      ttTitle.appendChild(ttDot);
+      ttTitle.appendChild(document.createTextNode(` ${pole.properties.externalCode || pole.id}`));
+      const ttSub = document.createElement('div');
+      ttSub.className = 'text-[10px] text-slate-300';
+      ttSub.textContent = `Phase ${phase} | ${wattage}W | ${
+        isReportedOn ? '💡 ILLUMINATED' : isFault ? '⚠️ FAULT' : 'STANDBY'
+      }`;
+      tooltipEl.appendChild(ttTitle);
+      tooltipEl.appendChild(ttSub);
+      marker.bindTooltip(tooltipEl, { sticky: true, opacity: 0.95 });
 
       // Interactive Popup with Real-Time Telemetry and Direct Switching
-      const safeCode = escapeHtml(pole.properties.externalCode || pole.id);
-      const safeId = escapeHtml(pole.id?.slice(0, 16));
-      const safePhaseColor = escapeHtml(phaseColor);
-      const safePhase = escapeHtml(phase);
-      const safeWattage = escapeHtml(wattage);
-      const safeVoltage = escapeHtml(pole.properties.voltage || 228.4);
-      const safeCurrent = escapeHtml(pole.properties.currentAmps || 0.31);
-      const safeFeeder = escapeHtml(pole.properties.feederPanelCode || 'FP-01');
-      const safeGateway = escapeHtml(pole.properties.gatewayExternalCode || 'GW-01');
-      const safePoleId = escapeHtml(pole.id);
-
-      const popupHtml = `
-        <div class="p-3 text-xs font-sans space-y-2.5 min-w-[260px]">
-          <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
-            <div>
-              <div class="font-bold text-white font-mono text-xs flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${safePhaseColor}"></span>
-                ${safeCode}
-              </div>
-              <div class="text-[10px] text-slate-400 font-mono">Asset ID: ${safeId}...</div>
-            </div>
-            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-              isReportedOn
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                : isFault
-                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                : 'bg-slate-800 text-slate-300 border border-slate-700'
-            }">
-              ${isReportedOn ? 'ON (ACTIVE)' : isFault ? 'FAULT' : 'OFF (STANDBY)'}
-            </span>
-          </div>
-
-          <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
-            <div class="p-1.5 bg-slate-950/80 rounded border border-slate-800">
-              <span class="text-slate-400 block text-[9px]">Phase Line</span>
-              <strong style="color: ${safePhaseColor}">Phase ${safePhase} (415V)</strong>
-            </div>
-            <div class="p-1.5 bg-slate-950/80 rounded border border-slate-800">
-              <span class="text-slate-400 block text-[9px]">Luminaire</span>
-              <strong class="text-amber-300">${safeWattage}W LED</strong>
-            </div>
-            <div class="p-1.5 bg-slate-950/80 rounded border border-slate-800">
-              <span class="text-slate-400 block text-[9px]">RMS Voltage</span>
-              <strong class="text-white">${safeVoltage} V</strong>
-            </div>
-            <div class="p-1.5 bg-slate-950/80 rounded border border-slate-800">
-              <span class="text-slate-400 block text-[9px]">Current / PF</span>
-              <strong class="text-emerald-400">${safeCurrent}A / 0.98</strong>
-            </div>
-          </div>
-
-          <div class="text-[10px] text-slate-400 font-mono space-y-0.5 border-t border-slate-800 pt-1.5">
-            <div class="flex justify-between">
-              <span>Feeder Panel:</span>
-              <span class="text-emerald-400 font-bold">${safeFeeder}</span>
-            </div>
-            <div class="flex justify-between">
-              <span>LoRa Gateway:</span>
-              <span class="text-purple-300 font-bold">${safeGateway}</span>
-            </div>
-          </div>
-
-          <div class="pt-2 border-t border-slate-800 flex items-center gap-2">
-            <button id="btn-toggle-${safePoleId}" class="flex-1 py-1.5 rounded text-[11px] font-bold flex items-center justify-center gap-1.5 transition ${
-              isReportedOn
-                ? 'bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800/80'
-                : 'bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/80'
-            }">
-              <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
-              <span>${isReportedOn ? 'Switch OFF' : 'Switch ON'}</span>
-            </button>
-            <button id="btn-inspect-${safePoleId}" class="px-2.5 py-1.5 rounded text-[11px] font-mono bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 transition" title="Inspect telemetry & details in side panel">
-              Inspect
-            </button>
-          </div>
-        </div>
-      `;
-
-      // Attach event listeners when popup opens
-      const popupDiv = createSafePopupElement(popupHtml);
+      const popupDiv = buildPolePopupElement(
+        pole,
+        isReportedOn,
+        () => {
+          onSwitchPole(pole, !isReportedOn);
+          marker.closePopup();
+        },
+        () => {
+          onSelectFeature(pole);
+        },
+      );
       marker.bindPopup(popupDiv);
       marker.on('popupopen', () => {
         onSelectFeature(pole);
-        const toggleBtn = popupDiv.querySelector<HTMLButtonElement>(`#btn-toggle-${pole.id}`);
-        if (toggleBtn) {
-          toggleBtn.onclick = () => {
-            onSwitchPole(pole, !isReportedOn);
-            marker.closePopup();
-          };
-        }
-        const inspectBtn = popupDiv.querySelector<HTMLButtonElement>(`#btn-inspect-${pole.id}`);
-        if (inspectBtn) {
-          inspectBtn.onclick = () => {
-            onSelectFeature(pole);
-          };
-        }
       });
 
       marker.on('click', () => {

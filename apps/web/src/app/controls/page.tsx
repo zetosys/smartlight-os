@@ -234,7 +234,7 @@ export default function ControlsPage() {
           type: emergencyAction,
           targetType: 'ULB',
           idempotencyKey,
-          payload: { reason: 'EMERGENCY_MUNICIPAL_OVERRIDE', actor: currentUser ? currentUser.email : 'system' },
+          payload: { reason: 'EMERGENCY_MUNICIPAL_OVERRIDE', actor: currentUser.email },
         }),
       });
 

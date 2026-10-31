@@ -431,7 +431,7 @@ export class CommandsService {
       targetId: s.target_id,
       timezone: s.timezone || 'Asia/Kolkata',
       rule: s.rule,
-      enabled: s.enabled ?? true,
+      enabled: s.enabled,
       targetCount,
       lastExecutedAt: s.last_executed_at,
       createdAt: s.created_at,

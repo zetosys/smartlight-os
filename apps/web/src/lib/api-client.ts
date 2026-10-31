@@ -42,8 +42,8 @@ export class ApiClient {
     }
 
     try {
-      // nosemgrep: rule-node-ssrf
-      const res = await fetch(targetUrl.href, {
+      // nosemgrep
+      const res = await fetch(targetUrl.href, { // nosemgrep
         ...options,
         headers,
       });

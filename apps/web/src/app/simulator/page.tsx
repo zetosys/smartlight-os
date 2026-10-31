@@ -183,9 +183,10 @@ export default function SimulatorPage() {
         `Injected scenario '${res.faultCode}' onto ${res.affectedCount} virtual devices. Telemetry and alarms updated.`,
       );
       setTargetDeviceId('');
-      fetchStatus();
-    } catch (err: any) {
-      setActionError(err.message || 'Failed to inject fault');
+      void fetchStatus();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setActionError(msg || 'Failed to inject fault');
     } finally {
       setSubmitting(false);
     }
@@ -199,9 +200,10 @@ export default function SimulatorPage() {
     try {
       await ApiClient.fetch('simulator/fault/clear', { method: 'POST' });
       setActionMsg('All active fault conditions cleared from virtual fleet.');
-      fetchStatus();
-    } catch (err: any) {
-      setActionError(err.message || 'Failed to clear faults');
+      void fetchStatus();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setActionError(msg || 'Failed to clear faults');
     } finally {
       setSubmitting(false);
     }

@@ -166,8 +166,9 @@ export default function SchedulingPage() {
       setIsModalOpen(false);
       setNewName('');
       setNotification({ type: 'success', message: `Schedule '${created.name}' created successfully.` });
-    } catch (err: any) {
-      setNotification({ type: 'error', message: err.message || 'Failed to create schedule' });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setNotification({ type: 'error', message: msg || 'Failed to create schedule' });
     }
   };
 
@@ -605,7 +606,7 @@ export default function SchedulingPage() {
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => { setIsModalOpen(false); }}
                   className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs transition"
                 >
                   Cancel

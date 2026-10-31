@@ -185,7 +185,7 @@ export default function RolePortalsPage() {
     link.click();
     document.body.removeChild(link);
     setActionNotice(`Official certified audit file downloaded: ${filename}`);
-    setTimeout(() => setActionNotice(null), 5000);
+    setTimeout(() => { setActionNotice(null); }, 5000);
   };
 
   return (
@@ -419,7 +419,7 @@ export default function RolePortalsPage() {
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-[11px] text-slate-400 font-mono">SLA Deadline: &lt; 4 Hours (Met)</span>
                       <button
-                        onClick={() => { void handleResolveTicket(t.id, t.recommendedPart); }}
+                        onClick={() => { handleResolveTicket(t.id, t.recommendedPart); }}
                         className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition shadow"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
@@ -536,7 +536,7 @@ export default function RolePortalsPage() {
                   </div>
 
                   <button
-                    onClick={() => { void handleToggleFeeder(f.code); }}
+                    onClick={() => { handleToggleFeeder(f.code); }}
                     className={`w-full py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 ${
                       isOn
                         ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'

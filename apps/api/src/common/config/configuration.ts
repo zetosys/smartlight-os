@@ -11,7 +11,7 @@ export interface AppConfig {
 }
 
 export const configuration = (): AppConfig => {
-  const nodeEnv = process.env.NODE_ENV ? process.env.NODE_ENV : 'development';
+  const nodeEnv = process.env.NODE_ENV;
   const port = parseInt(process.env.PORT ?? '4000', 10);
   const jwtSecret =
     process.env.JWT_SECRET ?? 'dev-jwt-secret-smartlight-os-do-not-use-in-production-2026';

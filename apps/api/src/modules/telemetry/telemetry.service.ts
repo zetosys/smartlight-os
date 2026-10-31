@@ -185,11 +185,12 @@ export class TelemetryService {
   }
 
   public getLatestTelemetry(deviceId: string) {
-    const recent = this.db.memoryStore.telemetry
-      .filter((t) => t.device_id === deviceId || t.external_id === deviceId)
-      .slice(-1)[0];
-
-    if (recent) return recent;
+    const matching = this.db.memoryStore.telemetry.filter(
+      (t) => t.device_id === deviceId || t.external_id === deviceId,
+    );
+    if (matching.length > 0) {
+      return matching.slice(-1)[0];
+    }
 
     const dev = this.db.memoryStore.devices.find(
       (d) => d.id === deviceId || d.external_id === deviceId,

@@ -46,7 +46,7 @@ export default function AnalyticsPage() {
       const feederData = await ApiClient.fetch<FeederLoadProfile[]>(
         `telemetry/feeders/load-profiles?ulbId=${selectedUlb.id}`,
       );
-      setFeederProfiles(feederData || []);
+      setFeederProfiles(feederData);
     } catch {
       // Fallback
       const isKtr = selectedUlb.code === 'ULB-KTR';
