@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useUlb } from '../../components/context/UlbContext';
+import { useTheme } from '../../components/context/ThemeContext';
 import { ApiClient } from '../../lib/api-client';
 import { SimulatedBadge } from '@smartlight/ui';
-import { Settings, Shield, ScrollText, Database, Server } from 'lucide-react';
+import { Settings, Shield, ScrollText, Database, Server, Sun, Moon, Monitor } from 'lucide-react';
 
 interface AuditLogItem {
   id: string;
@@ -18,6 +19,7 @@ interface AuditLogItem {
 
 export default function SettingsPage() {
   const { selectedUlb } = useUlb();
+  const { theme, setTheme } = useTheme();
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
 
   useEffect(() => {
@@ -64,28 +66,90 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-            <Server className="w-4 h-4 text-amber-400" />
-            Infrastructure Parameters
-          </h2>
+        <div className="space-y-6">
+          {/* Appearance & Interface Theme Card */}
+          <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Sun className="w-4 h-4 text-amber-400" />
+              Interface Theme &amp; Contrast
+            </h2>
 
-          <div className="space-y-2 text-xs font-mono text-slate-300">
-            <div className="p-2.5 bg-slate-950/60 border border-slate-800 rounded flex justify-between">
-              <span className="text-slate-400">PostGIS Version:</span>
-              <span className="text-white">16-3.4 (PostgreSQL 16)</span>
+            <p className="text-xs text-slate-400">
+              Customize control room contrast modes. Preferences are persisted automatically.
+            </p>
+
+            <div className="grid grid-cols-3 gap-2 text-xs font-mono">
+              <button
+                type="button"
+                onClick={() => {
+                  setTheme('dark');
+                }}
+                className={`p-2.5 rounded-lg border flex flex-col items-center gap-1.5 transition ${
+                  theme === 'dark'
+                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 font-bold'
+                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <Moon className="w-4 h-4 text-amber-400" />
+                <span>Dark</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setTheme('light');
+                }}
+                className={`p-2.5 rounded-lg border flex flex-col items-center gap-1.5 transition ${
+                  theme === 'light'
+                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 font-bold'
+                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <Sun className="w-4 h-4 text-amber-400" />
+                <span>Light</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setTheme('system');
+                }}
+                className={`p-2.5 rounded-lg border flex flex-col items-center gap-1.5 transition ${
+                  theme === 'system'
+                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 font-bold'
+                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <Monitor className="w-4 h-4 text-sky-400" />
+                <span>System</span>
+              </button>
             </div>
-            <div className="p-2.5 bg-slate-950/60 border border-slate-800 rounded flex justify-between">
-              <span className="text-slate-400">MQTT Broker:</span>
-              <span className="text-white">Mosquitto (Port 1883)</span>
-            </div>
-            <div className="p-2.5 bg-slate-950/60 border border-slate-800 rounded flex justify-between">
-              <span className="text-slate-400">Redis / BullMQ:</span>
-              <span className="text-white">Redis 7 (Port 6379)</span>
-            </div>
-            <div className="p-2.5 bg-slate-950/60 border border-slate-800 rounded flex justify-between">
-              <span className="text-slate-400">Timezone:</span>
-              <span className="text-amber-400 font-bold">Asia/Kolkata (IST)</span>
+          </div>
+
+          {/* Infrastructure Parameters */}
+          <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Server className="w-4 h-4 text-amber-400" />
+              Infrastructure Parameters
+            </h2>
+
+            <div className="space-y-2 text-xs font-mono text-slate-300">
+              <div className="p-2.5 bg-slate-950/60 border border-slate-800 rounded flex justify-between">
+                <span className="text-slate-400">PostGIS Version:</span>
+                <span className="text-white">16-3.4 (PostgreSQL 16)</span>
+              </div>
+              <div className="p-2.5 bg-slate-950/60 border border-slate-800 rounded flex justify-between">
+                <span className="text-slate-400">MQTT Broker:</span>
+                <span className="text-white">Mosquitto (Port 1883)</span>
+              </div>
+              <div className="p-2.5 bg-slate-950/60 border border-slate-800 rounded flex justify-between">
+                <span className="text-slate-400">Redis / BullMQ:</span>
+                <span className="text-white">Redis 7 (Port 6379)</span>
+              </div>
+              <div className="p-2.5 bg-slate-950/60 border border-slate-800 rounded flex justify-between">
+                <span className="text-slate-400">Timezone:</span>
+                <span className="text-amber-400 font-bold">Asia/Kolkata (IST)</span>
+              </div>
             </div>
           </div>
         </div>

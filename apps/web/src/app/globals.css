@@ -103,3 +103,171 @@ body {
   animation: fault-pulse 1.5s infinite ease-in-out;
 }
 
+/* ==========================================================================
+   Light Mode Comprehensive Overrides (Activated via html.light)
+   ========================================================================== */
+
+html.light body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+html.light .bg-slate-950 {
+  background-color: #f8fafc !important;
+}
+html.light .bg-slate-950\/95,
+html.light .bg-slate-950\/90,
+html.light .bg-slate-950\/80 {
+  background-color: rgba(248, 250, 252, 0.9) !important;
+}
+html.light .bg-slate-950\/60,
+html.light .bg-slate-950\/50,
+html.light .bg-slate-950\/40 {
+  background-color: rgba(241, 245, 249, 0.75) !important;
+}
+
+html.light .bg-slate-900 {
+  background-color: #ffffff !important;
+}
+html.light .bg-slate-900\/95 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+html.light .bg-slate-900\/90 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+html.light .bg-slate-900\/80 {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+html.light .bg-slate-800 {
+  background-color: #f1f5f9 !important;
+}
+html.light .bg-slate-800\/90,
+html.light .bg-slate-800\/80 {
+  background-color: rgba(241, 245, 249, 0.85) !important;
+}
+html.light .bg-slate-800\/60,
+html.light .bg-slate-800\/50,
+html.light .bg-slate-800\/40 {
+  background-color: rgba(241, 245, 249, 0.6) !important;
+}
+
+html.light .bg-slate-700 {
+  background-color: #e2e8f0 !important;
+}
+html.light .bg-slate-700\/80 {
+  background-color: rgba(226, 232, 240, 0.8) !important;
+}
+
+html.light .border-slate-800,
+html.light .border-slate-800\/80,
+html.light .border-slate-800\/60,
+html.light .border-slate-800\/40 {
+  border-color: #e2e8f0 !important;
+}
+
+html.light .border-slate-700,
+html.light .border-slate-700\/80,
+html.light .border-slate-700\/60 {
+  border-color: #cbd5e1 !important;
+}
+
+html.light .divide-slate-800 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e2e8f0 !important;
+}
+
+html.light .text-white,
+html.light .text-slate-100 {
+  color: #0f172a !important;
+}
+html.light .text-slate-200 {
+  color: #1e293b !important;
+}
+html.light .text-slate-300 {
+  color: #334155 !important;
+}
+html.light .text-slate-400 {
+  color: #64748b !important;
+}
+html.light .text-slate-500 {
+  color: #64748b !important;
+}
+
+html.light .hover\:bg-slate-800:hover,
+html.light .hover\:bg-slate-800\/80:hover {
+  background-color: #e2e8f0 !important;
+}
+html.light .hover\:bg-slate-700:hover {
+  background-color: #cbd5e1 !important;
+}
+html.light .hover\:text-white:hover {
+  color: #0f172a !important;
+}
+html.light .hover\:border-slate-700:hover {
+  border-color: #94a3b8 !important;
+}
+
+html.light input:not([type="checkbox"]):not([type="radio"]),
+html.light select,
+html.light textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html.light .shadow-2xl {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
+}
+
+html.light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+html.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Leaflet Light Mode Overrides */
+html.light .leaflet-container {
+  background-color: #f1f5f9 !important;
+}
+html.light .leaflet-popup-content-wrapper {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15) !important;
+}
+html.light .leaflet-popup-tip {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+}
+html.light .leaflet-container a.leaflet-popup-close-button {
+  color: #64748b !important;
+}
+html.light .leaflet-container a.leaflet-popup-close-button:hover {
+  color: #0f172a !important;
+}
+html.light .leaflet-bar {
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+html.light .leaflet-bar a {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  color: #334155 !important;
+}
+html.light .leaflet-bar a:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+html.light .leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #64748b !important;
+}
+

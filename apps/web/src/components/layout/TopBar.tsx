@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useUlb, SEED_ACCOUNTS, INITIAL_ULBS } from '../context/UlbContext';
+import { useTheme } from '../context/ThemeContext';
 import {
   Building2,
   User,
@@ -17,6 +18,8 @@ import {
   Sparkles,
   MapPin,
   Clock,
+  Sun,
+  Moon,
 } from 'lucide-react';
 
 interface TopBarProps {
@@ -33,6 +36,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen =
     setCurrentAccount,
     isBackendOnline,
   } = useUlb();
+  const { resolvedTheme, toggleTheme } = useTheme();
 
   // Custom Dropdown Open States
   const [isUlbMenuOpen, setIsUlbMenuOpen] = useState(false);
@@ -253,6 +257,23 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen =
           <Bell className="w-4 h-4" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-slate-900" />
         </Link>
+
+        {/* Light / Dark Theme Switcher Button */}
+        <button
+          type="button"
+          onClick={() => {
+            toggleTheme();
+          }}
+          className="p-2 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-slate-800 transition-colors focus:outline-none focus:ring-1 focus:ring-amber-500"
+          title={resolvedTheme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+          aria-label={resolvedTheme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+        >
+          {resolvedTheme === 'dark' ? (
+            <Sun className="w-4 h-4 text-amber-400 transition-transform hover:rotate-45" />
+          ) : (
+            <Moon className="w-4 h-4 text-sky-400 transition-transform hover:-rotate-12" />
+          )}
+        </button>
 
         <div className="h-5 w-px bg-slate-800 mx-0.5" />
 
