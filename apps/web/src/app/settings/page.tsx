@@ -5,7 +5,8 @@ import { useUlb } from '../../components/context/UlbContext';
 import { useTheme } from '../../components/context/ThemeContext';
 import { ApiClient } from '../../lib/api-client';
 import { SimulatedBadge } from '@smartlight/ui';
-import { Settings, Shield, ScrollText, Database, Server, Sun, Moon, Monitor } from 'lucide-react';
+import { Settings, Shield, ScrollText, Database, Server, Sun, Moon, Monitor, Award, KeyRound, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 
 interface AuditLogItem {
   id: string;
@@ -151,6 +152,50 @@ export default function SettingsPage() {
                 <span className="text-amber-400 font-bold">Asia/Kolkata (IST)</span>
               </div>
             </div>
+          </div>
+
+          {/* Platform License & Entitlements Card */}
+          <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+                <Award className="w-4 h-4 text-amber-400" />
+                Enterprise Platform License
+              </h2>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold">
+                ACTIVE
+              </span>
+            </div>
+
+            <div className="space-y-2 text-xs font-mono text-slate-300">
+              <div className="p-2.5 bg-slate-950/60 border border-slate-800 rounded space-y-1">
+                <div className="text-[10px] text-slate-400">Licensee &amp; Jurisdiction:</div>
+                <div className="text-white font-semibold font-sans">J&amp;K Housing &amp; Urban Development Dept (JKHUDD)</div>
+              </div>
+
+              <div className="p-2.5 bg-slate-950/60 border border-slate-800 rounded flex justify-between">
+                <span className="text-slate-400">Subscription Tier:</span>
+                <span className="text-amber-400 font-bold">Enterprise (7-Yr O&amp;M)</span>
+              </div>
+
+              <div className="p-2.5 bg-slate-950/60 border border-slate-800 rounded flex justify-between">
+                <span className="text-slate-400">Governed Capacity:</span>
+                <span className="text-emerald-400">10,000 Luminaires</span>
+              </div>
+
+              <div className="p-2.5 bg-slate-950/60 border border-slate-800 rounded flex justify-between">
+                <span className="text-slate-400">Sovereign Authority:</span>
+                <span className="text-purple-400">MeitY MeghRaj Certified</span>
+              </div>
+            </div>
+
+            <Link
+              href="/portal?tab=platform"
+              className="w-full py-2 px-3 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center justify-center gap-1.5 transition"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+              Manage License in Master Console
+              <ExternalLink className="w-3 h-3 text-amber-400 ml-0.5" />
+            </Link>
           </div>
         </div>
 

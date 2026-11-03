@@ -43,4 +43,23 @@ export class OrganizationsController {
   updateUlb(@Param('id') id: string, @Body() body: Record<string, unknown>) {
     return this.orgService.updateUlb(id, body);
   }
+
+  @Get('license')
+  getLicense() {
+    return this.orgService.getPlatformLicense();
+  }
+
+  @Post('license/apply')
+  @RequirePermissions('org.manage')
+  applyLicense(
+    @Body()
+    body: {
+      licenseKey: string;
+      tier?: string;
+      maxLuminaires?: number;
+      maxUlbs?: number;
+    },
+  ) {
+    return this.orgService.updatePlatformLicense(body);
+  }
 }

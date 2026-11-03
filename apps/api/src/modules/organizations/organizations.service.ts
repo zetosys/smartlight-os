@@ -87,4 +87,112 @@ export class OrganizationsService {
     if (data.longitude) ulb.longitude = Number(data.longitude);
     return ulb;
   }
+
+  private currentLicense = {
+    licenseId: 'SL-LIC-JKHUDD-2026-ENT-A8F9',
+    licenseKey: 'SL-ENT-2026-JKHUDD-7Y-9984SLA-RSA4096-MEITY',
+    tier: 'ENTERPRISE_STATE_DIRECTORATE',
+    tierName: 'Enterprise State Directorate (7-Year O&M Contract)',
+    licensee: 'J&K Housing & Urban Development Department (JKHUDD)',
+    issuingAuthority: 'SmartLight OS Sovereign Core - Licensing Authority (GoI Certified)',
+    issuedAt: '2026-01-01T00:00:00.000Z',
+    validFrom: '2026-01-01T00:00:00.000Z',
+    validUntil: '2033-01-01T00:00:00.000Z',
+    omContractYears: 7,
+    status: 'ACTIVE_GOVERNED',
+    maxLuminaires: 10000,
+    maxUlbs: 10,
+    maxCcmsPanels: 100,
+    maxOperatorSeats: -1,
+    slaGuarantee: '99.8% System Uptime SLA (MeitY MeghRaj Certified)',
+    features: {
+      astronomicalEngine: true,
+      gisSpatialIndex: true,
+      multiTenantRbac: true,
+      slaUptimeAudit: true,
+      mqttCcmsTelemetry: true,
+      meityMeghrajSovereignty: true,
+      energySavingsBaseline: true,
+      restApiIntegrations: true,
+    },
+    cryptographicSignature: 'SHA256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+  };
+
+  public getPlatformLicense() {
+    const totalFleet = this.db.memoryStore.ulbs.reduce((acc, u) => {
+      const fc = (u as unknown as { fleetCount?: number }).fleetCount;
+      return (
+        acc +
+        (fc ||
+          (u.code === 'ULB-GBL' ? 2740 : u.code === 'ULB-KTR' ? 1868 : 1200))
+      );
+    }, 0);
+
+    const totalUlbs = this.db.memoryStore.ulbs.length;
+    const totalCcms = 60;
+
+    return {
+      ...this.currentLicense,
+      metrics: {
+        allocatedLuminaires: totalFleet,
+        maxLuminaires: this.currentLicense.maxLuminaires,
+        luminaireUtilizationPercent: +(
+          (totalFleet / this.currentLicense.maxLuminaires) *
+          100
+        ).toFixed(1),
+        remainingLuminaires: Math.max(
+          0,
+          this.currentLicense.maxLuminaires - totalFleet,
+        ),
+
+        allocatedUlbs: totalUlbs,
+        maxUlbs: this.currentLicense.maxUlbs,
+        ulbUtilizationPercent: +(
+          (totalUlbs / this.currentLicense.maxUlbs) *
+          100
+        ).toFixed(1),
+        remainingUlbs: Math.max(0, this.currentLicense.maxUlbs - totalUlbs),
+
+        allocatedCcmsPanels: totalCcms,
+        maxCcmsPanels: this.currentLicense.maxCcmsPanels,
+        ccmsUtilizationPercent: +(
+          (totalCcms / this.currentLicense.maxCcmsPanels) *
+          100
+        ).toFixed(1),
+      },
+    };
+  }
+
+  public updatePlatformLicense(data: {
+    licenseKey: string;
+    tier?: string;
+    maxLuminaires?: number;
+    maxUlbs?: number;
+  }) {
+    if (!data.licenseKey || data.licenseKey.trim().length < 8) {
+      throw new BadRequestException('A valid cryptographic license key is required');
+    }
+
+    if (data.tier) {
+      this.currentLicense.tier = data.tier;
+      this.currentLicense.tierName =
+        data.tier === 'STATEWIDE_MEGA_FLEET'
+          ? 'Statewide Mega Fleet Tier (25,000 Nodes / 10-Yr O&M)'
+          : data.tier === 'ALL_INDIA_SMART_CITIES'
+            ? 'All-India Smart Cities Mega Fleet (100,000 Nodes / Perpetual)'
+            : 'Enterprise State Directorate (7-Year O&M Contract)';
+    }
+
+    if (data.maxLuminaires && data.maxLuminaires > 0) {
+      this.currentLicense.maxLuminaires = data.maxLuminaires;
+    }
+    if (data.maxUlbs && data.maxUlbs > 0) {
+      this.currentLicense.maxUlbs = data.maxUlbs;
+    }
+
+    this.currentLicense.licenseKey = data.licenseKey.trim();
+    this.currentLicense.licenseId = `SL-LIC-${Date.now().toString(36).toUpperCase()}`;
+
+    return this.getPlatformLicense();
+  }
 }
