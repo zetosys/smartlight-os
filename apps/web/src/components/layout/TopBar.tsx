@@ -8,7 +8,6 @@ import {
   Building2,
   User,
   ChevronDown,
-  Activity,
   Bell,
   PanelLeft,
   Check,
@@ -34,7 +33,6 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen =
     setSelectedUlbId,
     currentUser,
     setCurrentAccount,
-    isBackendOnline,
   } = useUlb();
   const { resolvedTheme, toggleTheme } = useTheme();
 
@@ -233,21 +231,8 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen =
         </span>
       </div>
 
-      {/* Right Cluster: Connectivity Status, Alerts, & User Profile Dropdown */}
+      {/* Right Cluster: Alerts, Theme Toggle & User Profile Dropdown */}
       <div className="flex items-center gap-2.5 sm:gap-3">
-        {/* Backend Connectivity Status Pill */}
-        <div
-          className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-mono font-medium ${
-            isBackendOnline
-              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-              : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-          }`}
-          title={isBackendOnline ? 'Backend API (Port 4000) Connected' : 'Simulated Resilient Memory-Store Mode'}
-        >
-          <Activity className={`w-3 h-3 ${isBackendOnline ? 'text-emerald-400 animate-pulse' : 'text-amber-400'}`} />
-          <span>{isBackendOnline ? 'API ONLINE' : 'SANDBOX'}</span>
-        </div>
-
         {/* Quick Alerts Bell with Live Counter */}
         <Link
           href="/alerts"
