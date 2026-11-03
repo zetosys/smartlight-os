@@ -39,13 +39,174 @@ import {
   DollarSign,
   Leaf,
   Award,
+  Plus,
+  X,
+  Globe,
+  Compass,
+  Search,
+  Check,
 } from 'lucide-react';
 
 export default function RolePortalsPage() {
-  const { currentUser, setCurrentAccount, selectedUlb, setSelectedUlbId, allUlbs } = useUlb();
+  const {
+    currentUser,
+    setCurrentAccount,
+    selectedUlb,
+    setSelectedUlbId,
+    allUlbs,
+    refreshUlbs,
+    addUlb,
+  } = useUlb();
 
   // Selected portal view (defaults to current user's role workspace)
   const [activePortal, setActivePortal] = useState<'technician' | 'operator' | 'auditor' | 'reports' | 'admin' | 'platform'>('technician');
+
+  // ULB Onboarding & Tenancy States
+  const [isCreateUlbModalOpen, setIsCreateUlbModalOpen] = useState(false);
+  const [isCreatingUlb, setIsCreatingUlb] = useState(false);
+  const [createUlbError, setCreateUlbError] = useState<string | null>(null);
+  const [ulbSearchQuery, setUlbSearchQuery] = useState('');
+
+  const [ulbName, setUlbName] = useState('');
+  const [ulbCode, setUlbCode] = useState('');
+  const [ulbState, setUlbState] = useState('Jammu and Kashmir');
+  const [ulbLatitude, setUlbLatitude] = useState('34.2090');
+  const [ulbLongitude, setUlbLongitude] = useState('74.3430');
+  const [ulbFleetCount, setUlbFleetCount] = useState('1500');
+
+  const PRESET_ULBS = [
+    {
+      name: 'Baramulla Municipal Council',
+      code: 'ULB-BRM',
+      state: 'Jammu and Kashmir',
+      lat: '34.2090',
+      lng: '74.3430',
+      fleet: '1850',
+    },
+    {
+      name: 'Anantnag Municipal Council',
+      code: 'ULB-ANG',
+      state: 'Jammu and Kashmir',
+      lat: '33.7311',
+      lng: '75.1487',
+      fleet: '2100',
+    },
+    {
+      name: 'Sopore Municipal Council',
+      code: 'ULB-SPR',
+      state: 'Jammu and Kashmir',
+      lat: '34.2980',
+      lng: '74.4690',
+      fleet: '1600',
+    },
+    {
+      name: 'Udhampur Municipal Council',
+      code: 'ULB-UDH',
+      state: 'Jammu and Kashmir',
+      lat: '32.9250',
+      lng: '75.1410',
+      fleet: '1450',
+    },
+  ];
+
+  const handleApplyPreset = (preset: (typeof PRESET_ULBS)[0]) => {
+    setUlbName(preset.name);
+    setUlbCode(preset.code);
+    setUlbState(preset.state);
+    setUlbLatitude(preset.lat);
+    setUlbLongitude(preset.lng);
+    setUlbFleetCount(preset.fleet);
+  };
+
+  const handleCreateUlb = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ulbName.trim() || !ulbCode.trim()) {
+      setCreateUlbError('Municipal Name and ULB Code are required.');
+      return;
+    }
+
+    setIsCreatingUlb(true);
+    setCreateUlbError(null);
+
+    const payload = {
+      name: ulbName.trim(),
+      code: ulbCode.trim().toUpperCase(),
+      state: ulbState,
+      latitude: parseFloat(ulbLatitude) || 34.0,
+      longitude: parseFloat(ulbLongitude) || 74.8,
+      fleetCount: parseInt(ulbFleetCount, 10) || 1200,
+    };
+
+    try {
+      const res = await ApiClient.fetch<{
+        id: string;
+        code: string;
+        name: string;
+        state: string;
+        latitude?: number;
+        longitude?: number;
+        fleetCount?: number;
+      }>('ulbs', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      addUlb({
+        id: res.id,
+        code: res.code,
+        name: res.name,
+        state: res.state || ulbState,
+        latitude: res.latitude ?? payload.latitude,
+        longitude: res.longitude ?? payload.longitude,
+        fleetCount: res.fleetCount ?? payload.fleetCount,
+      });
+      await refreshUlbs();
+
+      setActionNotice(
+        `Municipal entity "${res.name}" (${res.code}) successfully onboarded to State Directorate! Zone 1 & Ward 1 topology initialized.`,
+      );
+      setIsCreateUlbModalOpen(false);
+      setUlbName('');
+      setUlbCode('');
+      setUlbLatitude('34.2090');
+      setUlbLongitude('74.3430');
+      setUlbFleetCount('1500');
+      setTimeout(() => {
+        setActionNotice(null);
+      }, 6000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const fallbackUlb = {
+        id: `ulb-local-${Date.now()}`,
+        code: payload.code,
+        name: payload.name,
+        state: payload.state,
+        latitude: payload.latitude,
+        longitude: payload.longitude,
+        fleetCount: payload.fleetCount,
+      };
+      addUlb(fallbackUlb);
+      setActionNotice(
+        `Municipal entity "${fallbackUlb.name}" (${fallbackUlb.code}) provisioned in local state! (${msg.includes('Offline') ? 'Offline mode active' : msg})`,
+      );
+      setIsCreateUlbModalOpen(false);
+      setUlbName('');
+      setUlbCode('');
+      setTimeout(() => {
+        setActionNotice(null);
+      }, 6000);
+    } finally {
+      setIsCreatingUlb(false);
+    }
+  };
+
+  const handleSwitchUlbScope = (ulbId: string, name: string) => {
+    setSelectedUlbId(ulbId);
+    setActionNotice(`Active municipal jurisdiction switched to "${name}". All control room dashboards & GIS maps updated.`);
+    setTimeout(() => {
+      setActionNotice(null);
+    }, 5000);
+  };
 
   // Synchronize active view with current user's role on load or user switch
   useEffect(() => {
@@ -1016,6 +1177,7 @@ export default function RolePortalsPage() {
       {/* PORTAL 5: GLOBAL PLATFORM ADMINISTRATOR CONSOLE */}
       {activePortal === 'platform' && (
         <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Platform Console Header */}
           <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
@@ -1024,40 +1186,470 @@ export default function RolePortalsPage() {
               <div>
                 <h2 className="text-base font-bold text-white">State Directorate Master Platform Console</h2>
                 <p className="text-xs text-slate-400 font-mono">
-                  Administrator: {currentUser.name} • Cross-ULB Multi-Tenant Governance
+                  Administrator: {currentUser.name} • Cross-ULB Multi-Tenant Governance &amp; Municipal Provisioning
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  void refreshUlbs();
+                  setActionNotice('Refreshing municipal directory from State Directorate API...');
+                  setTimeout(() => {
+                    setActionNotice(null);
+                  }, 3000);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition"
+                title="Refresh municipal directory from backend"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+                Refresh Directory
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsCreateUlbModalOpen(true);
+                }}
+                className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition transform active:scale-95"
+              >
+                <Plus className="w-4 h-4" />
+                + Onboard Municipal ULB
+              </button>
+
               <Link
                 href="/users"
-                className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow"
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition"
               >
-                <ShieldCheck className="w-3.5 h-3.5" />
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
                 Configure RBAC Role Matrix
               </Link>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
-              <div className="text-xs text-slate-400">Total Municipal Streetlights</div>
-              <div className="text-2xl font-black text-amber-400">4,608</div>
-              <div className="text-[10px] text-slate-400 font-mono">Ganderbal: 2,740 • Katra: 1,868</div>
+          {/* Directorate KPI Metrics */}
+          {(() => {
+            const totalFleet = allUlbs.reduce((acc, u) => {
+              if (u.fleetCount) return acc + u.fleetCount;
+              if (u.code === 'ULB-GBL') return acc + 2740;
+              if (u.code === 'ULB-KTR') return acc + 1868;
+              return acc + 1200;
+            }, 0);
+
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400">Active Municipalities (ULBs)</span>
+                    <Building2 className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <div className="text-2xl font-black text-amber-400">{allUlbs.length} Municipalities</div>
+                  <div className="text-[10px] text-slate-400 font-mono">J&amp;K Urban Local Bodies Directorate</div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400">Total Governed Streetlights</span>
+                    <Zap className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div className="text-2xl font-black text-emerald-400">{totalFleet.toLocaleString('en-IN')}</div>
+                  <div className="text-[10px] text-slate-400 font-mono truncate">
+                    {allUlbs.map((u) => `${u.code.replace('ULB-', '')}: ${(u.fleetCount ?? (u.code === 'ULB-GBL' ? 2740 : u.code === 'ULB-KTR' ? 1868 : 1200)).toLocaleString('en-IN')}`).join(' • ')}
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400">Active CCMS Feeder Panels</span>
+                    <Cpu className="w-4 h-4 text-sky-400" />
+                  </div>
+                  <div className="text-2xl font-black text-sky-400">60+ Panels</div>
+                  <div className="text-[10px] text-slate-400 font-mono">3-Phase 415V Energy Concentrators</div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400">Sovereign Cloud SLA</span>
+                    <Globe className="w-4 h-4 text-purple-400" />
+                  </div>
+                  <div className="text-2xl font-black text-purple-400">99.84% Uptime</div>
+                  <div className="text-[10px] text-slate-400 font-mono">MeitY MeghRaj Sovereign Cloud (Clause 52)</div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Municipal ULB Directory & Tenancy Hub */}
+          <div className="p-5 rounded-xl bg-slate-900 border border-slate-800 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-amber-400" />
+                  Municipal ULB Tenancy &amp; Astronomical GIS Hub
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Clause 40 &amp; 44 Multi-Tenant
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Multi-tenant municipal jurisdictions currently governed under the State Directorate. Only Global Administrators can provision new ULBs.
+                </p>
+              </div>
+
+              {/* Search filter input */}
+              <div className="relative min-w-[220px]">
+                <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Filter ULBs by name or code..."
+                  value={ulbSearchQuery}
+                  onChange={(e) => {
+                    setUlbSearchQuery(e.target.value);
+                  }}
+                  className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                />
+              </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
-              <div className="text-xs text-slate-400">Active CCMS Feeder Panels</div>
-              <div className="text-2xl font-black text-emerald-400">60 Panels</div>
-              <div className="text-[10px] text-slate-400 font-mono">3-Phase 415V Concentrators</div>
+            {/* Municipal Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {allUlbs
+                .filter(
+                  (u) =>
+                    u.name.toLowerCase().includes(ulbSearchQuery.toLowerCase()) ||
+                    u.code.toLowerCase().includes(ulbSearchQuery.toLowerCase()) ||
+                    (u.state || '').toLowerCase().includes(ulbSearchQuery.toLowerCase()),
+                )
+                .map((ulb) => {
+                  const isSelected = selectedUlb?.id === ulb.id;
+                  const isGbl = ulb.code === 'ULB-GBL';
+                  const isKtr = ulb.code === 'ULB-KTR';
+                  const fleet =
+                    ulb.fleetCount ?? (isGbl ? 2740 : isKtr ? 1868 : 1200);
+                  const lat = ulb.latitude ?? (isGbl ? 34.2165 : isKtr ? 32.9925 : 34.2);
+                  const lng = ulb.longitude ?? (isGbl ? 74.7725 : isKtr ? 74.9318 : 74.34);
+
+                  return (
+                    <div
+                      key={ulb.id}
+                      className={`p-4 rounded-xl border transition-all flex flex-col justify-between ${
+                        isSelected
+                          ? 'bg-amber-500/10 border-amber-500/50 shadow-lg shadow-amber-500/5'
+                          : 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="space-y-3">
+                        {/* Top row: Name & Code */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                              <span>{ulb.name}</span>
+                            </div>
+                            <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5">
+                              <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
+                              <span>{ulb.state || 'Jammu and Kashmir'}</span>
+                              <span>•</span>
+                              <span className="font-mono text-slate-400">{ulb.timezone || 'Asia/Kolkata'}</span>
+                            </div>
+                          </div>
+
+                          <span className="px-2 py-0.5 rounded font-mono text-[10px] font-bold bg-slate-800 text-amber-400 border border-slate-700 shrink-0">
+                            {ulb.code}
+                          </span>
+                        </div>
+
+                        {/* Middle metadata: Coordinates & Astronomical Anchor */}
+                        <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-1.5 text-[11px]">
+                          <div className="flex justify-between items-center text-slate-300">
+                            <span className="text-slate-400 flex items-center gap-1">
+                              <Compass className="w-3 h-3 text-sky-400" />
+                              GIS Anchor:
+                            </span>
+                            <span className="font-mono text-sky-300 font-semibold">
+                              {lat.toFixed(4)}° N, {lng.toFixed(4)}° E
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-slate-300">
+                            <span className="text-slate-400 flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-amber-400" />
+                              Astronomical Offset:
+                            </span>
+                            <span className="font-mono text-amber-300">±15m Civil Twilight</span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-slate-300">
+                            <span className="text-slate-400 flex items-center gap-1">
+                              <Zap className="w-3 h-3 text-emerald-400" />
+                              Governed Fleet:
+                            </span>
+                            <span className="font-mono font-bold text-emerald-400">
+                              {fleet.toLocaleString('en-IN')} Luminaires
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Administrative Topology Badges */}
+                        <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400">
+                          <span className="px-2 py-0.5 rounded bg-slate-800/70 border border-slate-700/60">
+                            Zone 1 Main
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-slate-800/70 border border-slate-700/60">
+                            Ward 1 Central
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            ACTIVE
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Bottom Actions */}
+                      <div className="pt-3 mt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+                        {isSelected ? (
+                          <div className="w-full py-1.5 px-3 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold flex items-center justify-center gap-1.5">
+                            <Check className="w-3.5 h-3.5 text-amber-400" />
+                            Current Operational Scope
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              handleSwitchUlbScope(ulb.id, ulb.name);
+                            }}
+                            className="w-full py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 border border-slate-700 hover:text-white transition"
+                          >
+                            <ArrowRight className="w-3.5 h-3.5 text-amber-400" />
+                            Switch Operational Scope
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+
+          {/* Tender Architecture & Multi-Tenancy Governance Box */}
+          <div className="p-4 rounded-xl bg-gradient-to-r from-slate-900 to-slate-900/80 border border-slate-800 text-xs text-slate-400 space-y-2">
+            <div className="flex items-center gap-2 text-white font-bold">
+              <ShieldAlert className="w-4 h-4 text-amber-400" />
+              <span>Multi-Tenant Municipal Tenancy Architecture (Clauses 40, 44 &amp; 47)</span>
+            </div>
+            <p className="leading-relaxed">
+              Urban Local Bodies (ULBs) in SmartLight OS operate as isolated sovereign tenants. Only the Global Platform Administrator (<code className="text-amber-300">PLATFORM_ADMIN</code> / State Directorate of JKHUDD) possesses the authority to provision new municipal entities. Each ULB automatically provisions an astronomical solar calculation anchor based on its GPS latitude and longitude coordinates, ensuring automated dusk/dawn ignition adhere to Civil Twilight without requiring manual clock adjustments.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ONBOARD NEW MUNICIPAL ULB */}
+      {isCreateUlbModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="max-w-2xl w-full bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Onboard New Municipal Entity (ULB)</h3>
+                  <p className="text-xs text-slate-400">
+                    State Directorate of Urban Local Bodies • Provision Municipal Jurisdiction
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setIsCreateUlbModalOpen(false);
+                  setCreateUlbError(null);
+                }}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
-              <div className="text-xs text-slate-400">LoRaWAN/4G Gateways</div>
-              <div className="text-2xl font-black text-purple-400">20 Units</div>
-              <div className="text-[10px] text-slate-400 font-mono">MeitY MeghRaj Sovereign Cloud</div>
-            </div>
+            {/* Modal Body */}
+            <form onSubmit={handleCreateUlb} className="p-5 space-y-4">
+              {/* Presets Helper */}
+              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                <div className="text-[11px] font-semibold text-slate-300 flex items-center justify-between">
+                  <span>Quick-Fill from J&amp;K Municipal Roster:</span>
+                  <span className="text-[10px] text-amber-400 font-mono">1-Click Auto-Fill</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_ULBS.map((preset) => (
+                    <button
+                      key={preset.code}
+                      type="button"
+                      onClick={() => {
+                        handleApplyPreset(preset);
+                      }}
+                      className="px-2.5 py-1 rounded-md text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition font-mono flex items-center gap-1.5"
+                    >
+                      <Plus className="w-3 h-3 text-amber-400" />
+                      {preset.name.replace('Municipal Council', 'MC')} ({preset.code})
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-xs font-semibold text-slate-300">
+                    Municipal Entity Full Name <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g., Baramulla Municipal Council"
+                    value={ulbName}
+                    onChange={(e) => {
+                      setUlbName(e.target.value);
+                    }}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-300">
+                    ULB Unique Code <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g., ULB-BRM"
+                    value={ulbCode}
+                    onChange={(e) => {
+                      setUlbCode(e.target.value.toUpperCase());
+                    }}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 font-mono uppercase focus:outline-none focus:border-amber-500"
+                  />
+                  <div className="text-[10px] text-slate-500">Unique alphanumeric prefix (e.g. ULB-BRM)</div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-300">State / Union Territory</label>
+                  <select
+                    value={ulbState}
+                    onChange={(e) => {
+                      setUlbState(e.target.value);
+                    }}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+                    <option value="Ladakh">Ladakh</option>
+                    <option value="Himachal Pradesh">Himachal Pradesh</option>
+                    <option value="Punjab">Punjab</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-300">
+                    GIS Latitude (°N) <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    required
+                    placeholder="34.2090"
+                    value={ulbLatitude}
+                    onChange={(e) => {
+                      setUlbLatitude(e.target.value);
+                    }}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:border-amber-500"
+                  />
+                  <div className="text-[10px] text-slate-500">For Solar Astronomical Dusk/Dawn calculation</div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-300">
+                    GIS Longitude (°E) <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    required
+                    placeholder="74.3430"
+                    value={ulbLongitude}
+                    onChange={(e) => {
+                      setUlbLongitude(e.target.value);
+                    }}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:border-amber-500"
+                  />
+                  <div className="text-[10px] text-slate-500">For Solar Astronomical Dusk/Dawn calculation</div>
+                </div>
+
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-xs font-semibold text-slate-300">
+                    Target Governed Luminaire Fleet Size
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="1500"
+                    value={ulbFleetCount}
+                    onChange={(e) => {
+                      setUlbFleetCount(e.target.value);
+                    }}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:border-amber-500"
+                  />
+                  <div className="text-[10px] text-slate-500">
+                    Estimated streetlights under municipal contract (used in baseline energy savings math)
+                  </div>
+                </div>
+              </div>
+
+              {/* Automatic Topology Banner */}
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-200/90 space-y-1">
+                <div className="font-semibold flex items-center gap-1 text-amber-300">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  Automated Municipal Topology Provisioning:
+                </div>
+                <p className="text-[10px] text-amber-300/80 leading-relaxed">
+                  Onboarding this municipality automatically provisions <strong>Zone 1 (Main Town)</strong>, <strong>Ward 1 (Central Ward)</strong>, and initializes the NOAA Astronomical Twilight schedules for these coordinates.
+                </p>
+              </div>
+
+              {createUlbError && (
+                <div className="p-3 bg-red-500/15 border border-red-500/40 rounded-lg text-xs text-red-300 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>{createUlbError}</span>
+                </div>
+              )}
+
+              {/* Modal Actions */}
+              <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreateUlbModalOpen(false);
+                    setCreateUlbError(null);
+                  }}
+                  className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isCreatingUlb}
+                  className="px-5 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold flex items-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50 transition"
+                >
+                  {isCreatingUlb ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      Provisioning Municipal Entity...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      Provision &amp; Onboard ULB
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

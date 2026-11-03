@@ -23,7 +23,18 @@ export class OrganizationsController {
 
   @Post('ulbs')
   @RequirePermissions('org.manage')
-  createUlb(@Body() body: { name: string; code: string; organizationId?: string; latitude?: number; longitude?: number }) {
+  createUlb(
+    @Body()
+    body: {
+      name: string;
+      code: string;
+      organizationId?: string;
+      state?: string;
+      latitude?: number;
+      longitude?: number;
+      fleetCount?: number;
+    },
+  ) {
     return this.orgService.createUlb(body);
   }
 

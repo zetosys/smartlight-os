@@ -9,6 +9,10 @@ export interface UlbItem {
   code: string;
   name: string;
   state: string;
+  latitude?: number;
+  longitude?: number;
+  timezone?: string;
+  fleetCount?: number;
 }
 
 export const INITIAL_ULBS: UlbItem[] = [
@@ -17,12 +21,20 @@ export const INITIAL_ULBS: UlbItem[] = [
     code: 'ULB-GBL',
     name: 'Ganderbal Municipal Council',
     state: 'Jammu & Kashmir',
+    latitude: 34.2165,
+    longitude: 74.7725,
+    timezone: 'Asia/Kolkata',
+    fleetCount: 2740,
   },
   {
     id: '22222222-2222-2222-2222-222222222222',
     code: 'ULB-KTR',
     name: 'Katra Municipal Committee',
     state: 'Jammu & Kashmir',
+    latitude: 32.9925,
+    longitude: 74.9318,
+    timezone: 'Asia/Kolkata',
+    fleetCount: 1868,
   },
 ];
 
@@ -158,6 +170,8 @@ interface UlbContextValue {
   setCurrentAccount: (email: string) => void;
   isBackendOnline: boolean;
   checkHealth: () => Promise<void>;
+  refreshUlbs: () => Promise<void>;
+  addUlb: (newUlb: UlbItem) => void;
 }
 
 const UlbContext = createContext<UlbContextValue | undefined>(undefined);
@@ -166,10 +180,87 @@ export const UlbProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedUlbId, setSelectedUlbIdState] = useState<string>(INITIAL_ULBS[0].id);
   const [currentUser, setCurrentUser] = useState<SeedAccountOption>(SEED_ACCOUNTS[0]);
   const [isBackendOnline, setIsBackendOnline] = useState<boolean>(false);
+  const [ulbsList, setUlbsList] = useState<UlbItem[]>(INITIAL_ULBS);
 
   const setSelectedUlbId = (id: string) => {
     setSelectedUlbIdState(id);
     ApiClient.setActiveUlbId(id);
+  };
+
+  const authenticateAccount = async (acc: SeedAccountOption) => {
+    try {
+      const res = await ApiClient.fetch<{
+        accessToken?: string;
+        mfaRequired?: boolean;
+        mfaChallengeToken?: string;
+      }>('auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: acc.email, password: 'SmartLight@2026!' }),
+      });
+
+      if (res.accessToken) {
+        ApiClient.setToken(res.accessToken);
+      } else if (res.mfaRequired && res.mfaChallengeToken) {
+        // Complete seed challenge for dev / instant access
+        const mfaRes = await ApiClient.fetch<{ accessToken?: string }>('auth/mfa/verify', {
+          method: 'POST',
+          body: JSON.stringify({ mfaChallengeToken: res.mfaChallengeToken, code: '123456' }),
+        });
+        if (mfaRes.accessToken) {
+          ApiClient.setToken(mfaRes.accessToken);
+        }
+      }
+    } catch {
+      // Dev offline fallback
+    }
+  };
+
+  const refreshUlbs = async () => {
+    try {
+      const data = await ApiClient.fetch<
+        Array<{
+          id: string;
+          code: string;
+          name: string;
+          state?: string;
+          latitude?: number;
+          longitude?: number;
+          timezone?: string;
+          fleetCount?: number;
+        }>
+      >('ulbs');
+
+      if (Array.isArray(data) && data.length > 0) {
+        setUlbsList(
+          data.map((u) => ({
+            id: u.id,
+            code: u.code,
+            name: u.name,
+            state: u.state || 'Jammu & Kashmir',
+            latitude: u.latitude,
+            longitude: u.longitude,
+            timezone: u.timezone || 'Asia/Kolkata',
+            fleetCount:
+              u.fleetCount ??
+              (u.code === 'ULB-GBL' ? 2740 : u.code === 'ULB-KTR' ? 1868 : 1200),
+          })),
+        );
+      }
+    } catch {
+      // Retain in-memory list
+    }
+  };
+
+  const addUlb = (newUlb: UlbItem) => {
+    setUlbsList((prev) => {
+      const exists = prev.some((u) => u.id === newUlb.id || u.code.toUpperCase() === newUlb.code.toUpperCase());
+      if (exists) {
+        return prev.map((u) =>
+          u.id === newUlb.id || u.code.toUpperCase() === newUlb.code.toUpperCase() ? newUlb : u,
+        );
+      }
+      return [...prev, newUlb];
+    });
   };
 
   const setCurrentAccount = (email: string) => {
@@ -180,34 +271,28 @@ export const UlbProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!acc.isGlobalAdmin && acc.allowedUlbIds.length > 0 && !acc.allowedUlbIds.includes('*')) {
         setSelectedUlbId(acc.allowedUlbIds[0]);
       }
-      // Attempt login to get live token
-      void (async () => {
-        try {
-          const res = await ApiClient.fetch<{ accessToken: string }>('auth/login', {
-            method: 'POST',
-            body: JSON.stringify({ email: acc.email, password: 'SmartLight@2026!' }),
-          });
-          if (res.accessToken) {
-            ApiClient.setToken(res.accessToken);
-          }
-        } catch {
-          // Dev fallback
-        }
-      })();
+      void authenticateAccount(acc);
     }
   };
 
   const checkHealth = async () => {
     try {
       const res = (await fetch('http://localhost:4000/health').then((r) => r.json())) as { status?: string };
-      setIsBackendOnline(res.status === 'healthy' || res.status === 'degraded');
+      const online = res.status === 'healthy' || res.status === 'degraded';
+      setIsBackendOnline(online);
+      if (online) {
+        void refreshUlbs();
+      }
     } catch {
       setIsBackendOnline(false);
     }
   };
 
   useEffect(() => {
+    void authenticateAccount(SEED_ACCOUNTS[0]);
     void checkHealth();
+    void refreshUlbs();
+
     const interval = setInterval(() => {
       void checkHealth();
     }, 15000);
@@ -216,12 +301,12 @@ export const UlbProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  const selectedUlb = INITIAL_ULBS.find((u) => u.id === selectedUlbId) || null;
+  const selectedUlb = ulbsList.find((u) => u.id === selectedUlbId) || ulbsList[0] || null;
 
   // Filter selectable ULBs based on current user scope
   const accessibleUlbs = currentUser.isGlobalAdmin || currentUser.allowedUlbIds.includes('*')
-    ? INITIAL_ULBS
-    : INITIAL_ULBS.filter((u) => currentUser.allowedUlbIds.includes(u.id));
+    ? ulbsList
+    : ulbsList.filter((u) => currentUser.allowedUlbIds.includes(u.id));
 
   return (
     <UlbContext.Provider
@@ -233,6 +318,8 @@ export const UlbProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentAccount,
         isBackendOnline,
         checkHealth,
+        refreshUlbs,
+        addUlb,
       }}
     >
       {children}

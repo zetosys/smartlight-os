@@ -81,6 +81,13 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen =
     };
   }, []);
 
+  const totalFleet = allUlbs.reduce((acc, u) => {
+    if (u.fleetCount) return acc + u.fleetCount;
+    if (u.code === 'ULB-GBL') return acc + 2740;
+    if (u.code === 'ULB-KTR') return acc + 1868;
+    return acc + 1200;
+  }, 0);
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -165,15 +172,22 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen =
             <div className="absolute left-0 mt-2 w-72 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="px-2 py-1.5 text-[10px] uppercase font-mono tracking-wider text-slate-400 font-semibold border-b border-slate-800 mb-1 flex items-center justify-between">
                 <span>Select Municipal Jurisdiction</span>
-                <span className="text-amber-400 font-bold">4,608 Fleet</span>
+                <span className="text-amber-400 font-bold">{totalFleet.toLocaleString('en-IN')} Fleet</span>
               </div>
 
               <div className="space-y-1">
                 {allUlbs.map((ulb) => {
                   const isSelected = selectedUlb?.id === ulb.id;
                   const isGbl = ulb.code === 'ULB-GBL';
-                  const fleetCount = isGbl ? '2,740' : '1,868';
-                  const primaryCorridor = isGbl ? 'NH-1D & Beehama' : 'Banganga Shrine Route';
+                  const isKtr = ulb.code === 'ULB-KTR';
+                  const fleetCount = (
+                    ulb.fleetCount ?? (isGbl ? 2740 : isKtr ? 1868 : 1200)
+                  ).toLocaleString('en-IN');
+                  const primaryCorridor = isGbl
+                    ? 'NH-1D & Beehama'
+                    : isKtr
+                      ? 'Banganga Shrine Route'
+                      : `${ulb.state || 'Jammu & Kashmir'} Sector`;
 
                   return (
                     <button
