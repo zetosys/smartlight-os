@@ -19,6 +19,7 @@ import {
   Clock,
   Sun,
   Moon,
+  Plus,
 } from 'lucide-react';
 
 interface TopBarProps {
@@ -229,6 +230,21 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, isSidebarOpen =
                 <span>Sovereign Region: J&amp;K, India</span>
                 <span className="text-emerald-400 font-semibold">PostGIS 4326</span>
               </div>
+
+              {currentUser.isGlobalAdmin && (
+                <div className="mt-2 pt-2 border-t border-slate-800">
+                  <Link
+                    href="/portal?tab=platform&action=onboard"
+                    onClick={() => {
+                      setIsUlbMenuOpen(false);
+                    }}
+                    className="w-full py-1.5 px-2.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-amber-600/20 hover:from-amber-500/30 hover:to-amber-600/30 border border-amber-500/40 text-amber-300 text-xs font-bold flex items-center justify-center gap-1.5 transition"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-amber-400" />
+                    + Onboard New Municipal ULB
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -1,5 +1,5 @@
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+const RAW_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+const API_BASE_URL = RAW_BASE.replace(/\/+$/, '') + '/';
 
 export class ApiClient {
   private static token: string | null = null;
@@ -25,9 +25,11 @@ export class ApiClient {
     if (endpoint.includes('://') || endpoint.includes('..')) {
       throw new Error('Invalid relative API endpoint');
     }
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const targetUrl = new URL(cleanEndpoint, API_BASE_URL);
-    if (targetUrl.origin !== new URL(API_BASE_URL).origin) {
+    const relativeEndpoint = endpoint.replace(/^\/+/, '');
+    const targetUrl = new URL(relativeEndpoint, API_BASE_URL);
+    const baseParsed = new URL(API_BASE_URL);
+
+    if (targetUrl.origin !== baseParsed.origin || !targetUrl.pathname.startsWith(baseParsed.pathname)) {
       throw new Error('SSRF blocked: cross-origin destination prohibited');
     }
 

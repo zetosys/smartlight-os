@@ -58,8 +58,8 @@ export default function RolePortalsPage() {
     addUlb,
   } = useUlb();
 
-  // Selected portal view (defaults to current user's role workspace)
-  const [activePortal, setActivePortal] = useState<'technician' | 'operator' | 'auditor' | 'reports' | 'admin' | 'platform'>('technician');
+  // Selected portal view (defaults to platform admin workspace)
+  const [activePortal, setActivePortal] = useState<'technician' | 'operator' | 'auditor' | 'reports' | 'admin' | 'platform'>('platform');
 
   // ULB Onboarding & Tenancy States
   const [isCreateUlbModalOpen, setIsCreateUlbModalOpen] = useState(false);
@@ -116,6 +116,7 @@ export default function RolePortalsPage() {
     setUlbLatitude(preset.lat);
     setUlbLongitude(preset.lng);
     setUlbFleetCount(preset.fleet);
+    setCreateUlbError(null);
   };
 
   const handleCreateUlb = async (e: React.FormEvent) => {
@@ -125,12 +126,19 @@ export default function RolePortalsPage() {
       return;
     }
 
+    const normalizedCode = ulbCode.trim().toUpperCase();
+    const existing = allUlbs.find((u) => u.code.toUpperCase() === normalizedCode);
+    if (existing) {
+      setCreateUlbError(`ULB code "${normalizedCode}" is already registered (${existing.name}). Please use a unique municipal code.`);
+      return;
+    }
+
     setIsCreatingUlb(true);
     setCreateUlbError(null);
 
     const payload = {
       name: ulbName.trim(),
-      code: ulbCode.trim().toUpperCase(),
+      code: normalizedCode,
       state: ulbState,
       latitude: parseFloat(ulbLatitude) || 34.0,
       longitude: parseFloat(ulbLongitude) || 74.8,
@@ -176,25 +184,7 @@ export default function RolePortalsPage() {
       }, 6000);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      const fallbackUlb = {
-        id: `ulb-local-${Date.now()}`,
-        code: payload.code,
-        name: payload.name,
-        state: payload.state,
-        latitude: payload.latitude,
-        longitude: payload.longitude,
-        fleetCount: payload.fleetCount,
-      };
-      addUlb(fallbackUlb);
-      setActionNotice(
-        `Municipal entity "${fallbackUlb.name}" (${fallbackUlb.code}) provisioned in local state! (${msg.includes('Offline') ? 'Offline mode active' : msg})`,
-      );
-      setIsCreateUlbModalOpen(false);
-      setUlbName('');
-      setUlbCode('');
-      setTimeout(() => {
-        setActionNotice(null);
-      }, 6000);
+      setCreateUlbError(msg);
     } finally {
       setIsCreatingUlb(false);
     }
@@ -210,7 +200,21 @@ export default function RolePortalsPage() {
 
   // Synchronize active view with current user's role on load or user switch
   useEffect(() => {
-    if (currentUser.role === 'REPORTS_VIEWER') {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam === 'platform' || tabParam === 'admin' || tabParam === 'operator' || tabParam === 'technician' || tabParam === 'auditor' || tabParam === 'reports') {
+        setActivePortal(tabParam);
+        if (params.get('action') === 'onboard') {
+          setIsCreateUlbModalOpen(true);
+        }
+        return;
+      }
+    }
+
+    if (currentUser.role === 'PLATFORM_ADMIN') {
+      setActivePortal('platform');
+    } else if (currentUser.role === 'REPORTS_VIEWER') {
       setActivePortal('reports');
     } else if (currentUser.role === 'TECHNICIAN' || currentUser.role === 'MAINTENANCE_SUPERVISOR') {
       setActivePortal('technician');
@@ -1478,19 +1482,33 @@ export default function RolePortalsPage() {
                   <span className="text-[10px] text-amber-400 font-mono">1-Click Auto-Fill</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {PRESET_ULBS.map((preset) => (
-                    <button
-                      key={preset.code}
-                      type="button"
-                      onClick={() => {
-                        handleApplyPreset(preset);
-                      }}
-                      className="px-2.5 py-1 rounded-md text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition font-mono flex items-center gap-1.5"
-                    >
-                      <Plus className="w-3 h-3 text-amber-400" />
-                      {preset.name.replace('Municipal Council', 'MC')} ({preset.code})
-                    </button>
-                  ))}
+                  {PRESET_ULBS.map((preset) => {
+                    const alreadyExists = allUlbs.some(
+                      (u) => u.code.toUpperCase() === preset.code.toUpperCase(),
+                    );
+                    return (
+                      <button
+                        key={preset.code}
+                        type="button"
+                        disabled={alreadyExists}
+                        onClick={() => {
+                          handleApplyPreset(preset);
+                        }}
+                        className={`px-2.5 py-1 rounded-md text-[11px] border transition font-mono flex items-center gap-1.5 ${
+                          alreadyExists
+                            ? 'bg-slate-800/40 text-slate-500 border-slate-800 cursor-not-allowed opacity-60'
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700'
+                        }`}
+                        title={alreadyExists ? `${preset.code} is already provisioned` : `Click to auto-fill ${preset.name}`}
+                      >
+                        <Plus className="w-3 h-3 text-amber-400" />
+                        {preset.name.replace('Municipal Council', 'MC')} ({preset.code})
+                        {alreadyExists && (
+                          <span className="text-[9px] text-emerald-400 font-bold ml-1 font-sans">✓ Added</span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
