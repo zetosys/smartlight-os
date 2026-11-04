@@ -62,4 +62,20 @@ export class OrganizationsController {
   ) {
     return this.orgService.updatePlatformLicense(body);
   }
+
+  @Post('license/generate')
+  @RequirePermissions('org.manage')
+  generateLicense(
+    @Body()
+    body: {
+      licensee?: string;
+      tier?: string;
+      maxLuminaires?: number;
+      maxUlbs?: number;
+      maxCcmsPanels?: number;
+      validityYears?: number;
+    },
+  ) {
+    return this.orgService.generatePlatformLicense(body);
+  }
 }

@@ -15,6 +15,7 @@
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
+    "generate-license": "node scripts/generate-license.js",
     "clean": "pnpm -r exec rimraf dist .next node_modules"
   },
   "devDependencies": {
